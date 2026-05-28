@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Nowhere Maps — Places That Have No Address</title>
+<meta name="description" content="Satirical Google Maps-style reviews for real environmental phenomena that exist everywhere but have no address. A School of Recycling project."/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:'Roboto',Arial,sans-serif;font-size:14px;color:#3c4043;background:#fff;}
+#app{display:flex;flex-direction:column;height:100vh;}
+#topbar{display:flex;align-items:center;gap:12px;padding:8px 16px;background:#fff;border-bottom:1px solid #e0e0e0;box-shadow:0 1px 3px rgba(0,0,0,0.08);z-index:1000;flex-shrink:0;}
+.logo-wrap{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.logo-text{font-family:'Google Sans',sans-serif;font-size:20px;letter-spacing:-0.5px;}
+.logo-text .n{color:#4285F4}.logo-text .o1{color:#EA4335}.logo-text .w{color:#FBBC04}.logo-text .h{color:#4285F4}.logo-text .e{color:#34A853}.logo-text .r{color:#EA4335}.logo-text .e2{color:#4285F4}
+.logo-divider{width:1px;height:24px;background:#e0e0e0;flex-shrink:0;}
+.search-wrap{flex:1;position:relative;max-width:560px;}
+.search-wrap input{width:100%;height:40px;border:none;outline:none;background:#f1f3f4;border-radius:24px;padding:0 16px 0 44px;font-size:14px;color:#3c4043;font-family:'Roboto',sans-serif;transition:background 0.15s,box-shadow 0.15s;}
+.search-wrap input:focus{background:#fff;box-shadow:0 1px 6px rgba(32,33,36,0.2);}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9aa0a6;}
+.search-icon svg{display:block;}
+.sor-badge{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:#5f6368;flex-shrink:0;white-space:nowrap;}
+.sor-badge a{color:#1a73e8;text-decoration:none;font-weight:500;}
+.sor-badge a:hover{text-decoration:underline;}
+.sor-dot{width:8px;height:8px;border-radius:50%;background:#0db762;flex-shrink:0;}
+#content{display:flex;flex:1;overflow:hidden;}
+#sidebar{width:380px;flex-shrink:0;display:flex;flex-direction:column;background:#fff;overflow:hidden;box-shadow:2px 0 4px rgba(0,0,0,0.06);z-index:10;}
+#sidebar-header{padding:12px 16px 8px;border-bottom:1px solid #e8eaed;flex-shrink:0;}
+#sidebar-header h2{font-family:'Google Sans',sans-serif;font-size:15px;font-weight:400;color:#202124;}
+#sidebar-header p{font-size:12px;color:#70757a;margin-top:2px;line-height:1.5;}
+#result-count{font-size:12px;color:#70757a;margin-top:4px;}
+#filters{padding:8px 16px;border-bottom:1px solid #e8eaed;flex-shrink:0;}
+.filter-label{font-size:10px;text-transform:uppercase;letter-spacing:0.7px;color:#9aa0a6;margin-bottom:5px;font-weight:500;}
+.filter-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;}
+.filter-btn{font-size:11px;padding:3px 10px;border-radius:16px;border:1px solid #dadce0;color:#5f6368;background:#fff;cursor:pointer;font-family:'Roboto',sans-serif;transition:all 0.12s;}
+.filter-btn:hover{border-color:#aaa;color:#3c4043;}
+.filter-btn.active{background:#1a73e8;border-color:#1a73e8;color:#fff;}
+.filter-btn.waste.active{background:#0db762;border-color:#0db762;color:#fff;}
+#list-panel{overflow-y:auto;flex:1;}
+.place-item{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid #f1f3f4;cursor:pointer;transition:background 0.1s;}
+.place-item:hover{background:#f8f9fa;}
+.place-item.active{background:#e8f0fe;}
+.place-item.hidden{display:none;}
+.place-icon{width:40px;height:40px;border-radius:50%;background:#fce8e6;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.place-info{flex:1;min-width:0;}
+.place-info h3{font-size:14px;font-weight:500;color:#202124;line-height:1.3;margin-bottom:2px;}
+.place-meta{display:flex;align-items:center;gap:6px;margin-bottom:2px;}
+.place-stars{color:#EA4335;font-size:12px;letter-spacing:1px;}
+.place-star-num{font-size:12px;color:#70757a;}
+.place-address{font-size:12px;color:#70757a;font-style:italic;line-height:1.4;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.place-snippet{font-size:12px;color:#3c4043;line-height:1.5;}
+.place-chips{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;}
+.chip{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;}
+.chip.cat{background:#e8f0fe;color:#1a73e8;}
+.chip.waste{background:#e6f4ea;color:#137333;}
+.place-tagline{font-size:11px;color:#9aa0a6;margin-top:3px;font-style:italic;}
+.no-results{padding:24px 16px;text-align:center;color:#70757a;font-size:13px;line-height:1.6;}
+#detail-panel{display:none;flex-direction:column;flex:1;overflow:hidden;}
+#detail-panel.visible{display:flex;}
+#detail-header{padding:14px 16px 0;flex-shrink:0;}
+.back-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#1a73e8;cursor:pointer;border:none;background:none;padding:0;margin-bottom:12px;font-family:'Roboto',sans-serif;}
+.back-btn:hover{text-decoration:underline;}
+#detail-scroll{overflow-y:auto;flex:1;padding:0 16px 20px;}
+.detail-name{font-family:'Google Sans',sans-serif;font-size:22px;font-weight:400;color:#202124;line-height:1.3;margin-bottom:4px;}
+.detail-type{font-size:13px;color:#70757a;margin-bottom:8px;font-style:italic;}
+.detail-stars-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.detail-stars-big{color:#EA4335;font-size:18px;letter-spacing:2px;}
+.detail-star-num-big{font-size:18px;font-weight:500;color:#202124;}
+.detail-review-count{font-size:13px;color:#70757a;}
+.action-row{display:flex;gap:8px;margin-bottom:16px;}
+.action-btn{display:flex;flex-direction:column;align-items:center;gap:4px;background:#e8f0fe;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:'Roboto',sans-serif;font-size:12px;color:#1a73e8;font-weight:500;min-width:72px;}
+.action-btn:hover{background:#d2e3fc;}
+.detail-divider{height:1px;background:#e8eaed;margin:12px 0;}
+.detail-section-label{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:#70757a;margin-bottom:6px;font-weight:500;}
+.detail-review-box{background:#f8f9fa;border-radius:8px;padding:12px 14px;margin-bottom:12px;}
+.review-text{font-size:13px;line-height:1.7;color:#3c4043;}
+.review-sig{font-size:11px;color:#9aa0a6;margin-top:6px;font-style:italic;}
+.pin-note-box{display:flex;gap:10px;align-items:flex-start;background:#fef7e0;border-radius:8px;padding:10px 12px;margin-bottom:12px;}
+.pin-note-icon{flex-shrink:0;margin-top:1px;}
+.pin-note-text{font-size:12px;line-height:1.6;color:#5f4200;}
+.tags-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+.tag{font-size:11px;padding:3px 10px;border-radius:16px;border:1px solid #dadce0;color:#5f6368;background:#fff;}
+.sor-footer{margin-top:16px;padding:12px 14px;background:#f1f8f4;border-radius:8px;border-left:3px solid #0db762;}
+.sor-footer p{font-size:12px;line-height:1.6;color:#3c4043;}
+.sor-footer a{color:#0db762;text-decoration:none;font-weight:500;}
+.sor-footer a:hover{text-decoration:underline;}
+#map{flex:1;}
+.nm-popup{font-family:'Roboto',Arial,sans-serif;min-width:200px;}
+.nm-popup-title{font-family:'Google Sans',sans-serif;font-size:14px;font-weight:500;color:#202124;margin-bottom:2px;line-height:1.3;}
+.nm-popup-address{font-size:11px;color:#70757a;font-style:italic;margin-bottom:4px;}
+.nm-popup-stars{font-size:13px;color:#EA4335;margin-bottom:3px;}
+.nm-popup-tagline{font-size:11px;color:#9aa0a6;font-style:italic;}
+.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background-color:rgba(234,67,53,0.15)!important;}
+.marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background-color:rgba(234,67,53,0.75)!important;color:#fff!important;font-family:'Roboto',sans-serif!important;font-weight:500!important;}
+#list-panel::-webkit-scrollbar,#detail-scroll::-webkit-scrollbar{width:6px;}
+#list-panel::-webkit-scrollbar-track,#detail-scroll::-webkit-scrollbar-track{background:transparent;}
+#list-panel::-webkit-scrollbar-thumb,#detail-scroll::-webkit-scrollbar-thumb{background:#dadce0;border-radius:3px;}
+@media(max-width:680px){#sidebar{width:100%;position:absolute;bottom:0;left:0;right:0;z-index:20;height:52vh;box-shadow:0 -2px 8px rgba(0,0,0,0.1);}#content{position:relative;}#map{position:absolute;inset:0;}.sor-badge span{display:none;}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <div class="logo-wrap">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M14 2C8.477 2 4 6.477 4 12c0 7.5 10 16 10 16s10-8.5 10-16c0-5.523-4.477-10-10-10z" fill="#EA4335"/><circle cx="14" cy="12" r="4.5" fill="white"/></svg>
+      <div class="logo-text"><span class="n">N</span><span class="o1">o</span><span class="w">W</span><span class="h">h</span><span class="e">e</span><span class="r">r</span><span class="e2">e</span><span style="color:#5f6368;font-size:16px;margin-left:2px;">Maps</span></div>
+    </div>
+    <div class="logo-divider"></div>
+    <div class="search-wrap">
+      <span class="search-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></span>
+      <input type="text" id="search-input" placeholder="Search locations, tags, waste type..."/>
+    </div>
+    <div class="sor-badge">
+      <div class="sor-dot"></div>
+      <span>A </span><a href="https://www.schoolofrecycling.com" target="_blank">School of Recycling</a><span> project</span>
+    </div>
+  </div>
+  <div id="content">
+    <div id="sidebar">
+      <div id="sidebar-header">
+        <h2>Places with no address</h2>
+        <p>Real phenomena. No fixed location. Pinned as close as possible.</p>
+        <div id="result-count"></div>
+      </div>
+      <div id="filters">
+        <div class="filter-label">Category</div>
+        <div class="filter-row" id="cat-filters"></div>
+        <div class="filter-label">Waste type</div>
+        <div class="filter-row" id="waste-filters"></div>
+      </div>
+      <div id="list-panel"></div>
+      <div id="detail-panel">
+        <div id="detail-header">
+          <button class="back-btn" onclick="showList()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            All locations
+          </button>
+        </div>
+        <div id="detail-scroll">
+          <div class="detail-name" id="d-name"></div>
+          <div class="detail-type" id="d-type"></div>
+          <div class="detail-stars-row">
+            <span class="detail-star-num-big" id="d-num"></span>
+            <span class="detail-stars-big" id="d-stars"></span>
+            <span class="detail-review-count">1 review — the only one possible</span>
+          </div>
+          <div class="action-row">
+            <button class="action-btn" onclick="shareLocation()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+              Share
+            </button>
+            <button class="action-btn" onclick="saveLocation()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+              Save
+            </button>
+          </div>
+          <div class="detail-divider"></div>
+          <div class="detail-section-label">Review</div>
+          <div class="detail-review-box">
+            <div class="review-text" id="d-review"></div>
+            <div class="review-sig" id="d-sig"></div>
+          </div>
+          <div class="detail-section-label">Why this pin</div>
+          <div class="pin-note-box">
+            <div class="pin-note-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="#F9AB00"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
+            <div class="pin-note-text" id="d-pin-note"></div>
+          </div>
+          <div class="detail-section-label">Tags</div>
+          <div class="tags-wrap" id="d-tags"></div>
+          <div class="sor-footer">
+            <p>Part of <strong>Nowhere Maps</strong> by <a href="https://www.schoolofrecycling.com" target="_blank">School of Recycling</a> — waste literacy for K–12. Could not find this location on Google Maps. It found me.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="map"></div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+/* ══════════════════════════════════════════════════
+   LOCATIONS — add new entries here
+   Fields: name, type, address, stars (1-5),
+   category: "Ocean & water" | "Atmosphere" | "Soil & land" | "Corporate" | "Policy & greenwashing"
+   wasteType: "Plastic" | "Organic" | "Textile" | "E-waste" | "Mixed"
+   reviewShort, reviewFull, sig, pinNote, lat, lng, tags[]
+══════════════════════════════════════════════════ */
+const LOCATIONS = [
+  {
+    name: "Atmospheric CO\u2082 Layer",
+    type: "Invisible greenhouse gas \u00b7 Global",
+    address: "No fixed address \u00b7 Altitude: everywhere \u00b7 Est. 1750",
+    stars: 1, category: "Atmosphere", wasteType: "Mixed",
+    reviewShort: "421ppm and climbing. Invisible, odourless, planet-wide.",
+    reviewFull: "Invisible, odourless, planet-wide. Currently at 421ppm \u2014 up from 280ppm when it first showed up uninvited around the Industrial Revolution. No signage. No hours. Open 24/7, all continents, all altitudes. Affects crop yields, sea levels, and summer plans. Would leave a lower rating but it absorbed the signal.",
+    sig: "\u2014 Posted from: outside",
+    pinNote: "Pinned to Mauna Loa Observatory, Hawaii \u2014 where CO\u2082 has been continuously measured since 1958. The Keeling Curve was born here. Every year the line goes up.",
+    lat: 19.4794, lng: -155.6021, tags: ["no fixed address","global reach","open 24/7","invisible"]
+  },
+  {
+    name: "Microplastics in Human Blood",
+    type: "Uninvited circulatory resident \u00b7 Global",
+    address: "No fixed address \u00b7 Your circulatory system \u00b7 First detected: 2022",
+    stars: 1, category: "Ocean & water", wasteType: "Plastic",
+    reviewShort: "Intimate venue. Did not book. Already checked in.",
+    reviewFull: "Extremely personal location. Did not book, was not consulted, arrived anyway. Detected in human blood for the first time in 2022, now found in lungs, placentas, and breast milk. No checkout option visible. Atmosphere: internal. Decor: nanoplastic. Would not recommend but cannot unsubscribe.",
+    sig: "\u2014 Posted from: bloodstream",
+    pinNote: "Pinned to Vrije Universiteit Amsterdam \u2014 where researchers first confirmed microplastics in human blood in 2022. The study tested 22 anonymous donors. All 22 tested positive.",
+    lat: 52.3344, lng: 4.8659, tags: ["no fixed address","very personal","no checkout","plastic"]
+  },
+  {
+    name: "PFAS \u2018Forever Chemicals\u2019 in Tap Water",
+    type: "Persistent synthetic compound \u00b7 Waterways",
+    address: "No fixed address \u00b7 45% of US tap water \u00b7 Also: most of Europe",
+    stars: 2, category: "Ocean & water", wasteType: "Mixed",
+    reviewShort: "Came with the tap. Didn\u2019t ask for it. Persists indefinitely.",
+    reviewFull: "Convenient location \u2014 already in the kitchen. PFAS chemicals used in non-stick cookware, firefighting foam, and food packaging since the 1950s. Found in groundwater across the US, Netherlands, Germany, and most of Northern Europe. Half-life in soil: centuries. Half-life in human body: 4\u20138 years. Two stars because the water pressure was fine.",
+    sig: "\u2014 Posted from: the kitchen sink",
+    pinNote: "Pinned to Dordrecht, Netherlands \u2014 one of the first European cities to confirm PFAS contamination in drinking water. Source: a DuPont/Chemours factory upstream on the Merwede river.",
+    lat: 51.8133, lng: 4.6901, tags: ["tap water","no half-life","already home","forever chemicals"]
+  },
+  {
+    name: "North Atlantic Garbage Gyre",
+    type: "Rotating ocean plastic accumulation \u00b7 Atlantic",
+    address: "No fixed address \u00b7 North Atlantic Ocean \u00b7 Coordinates: it moves",
+    stars: 1, category: "Ocean & water", wasteType: "Plastic",
+    reviewShort: "Lesser known than its Pacific cousin. No less committed.",
+    reviewFull: "The North Atlantic Garbage Patch \u2014 far less famous than the Pacific one, equally unimpressed with us. Rotating with the North Atlantic Subtropical Gyre, accumulating plastic from Europe and the US east coast. No island, no border, no Google pin. Mostly microplastics now, distributed across the top few meters of ocean. Slow. Permanent. No TripAdvisor page. Feels intentional.",
+    sig: "\u2014 Posted from: somewhere between Portugal and New York",
+    pinNote: "Pinned to approximate centre of the North Atlantic Subtropical Gyre \u2014 roughly 30\u00b0N, 40\u00b0W. Not a fixed point. The patch moves with the current. This pin will be wrong by tomorrow.",
+    lat: 30.0, lng: -40.0, tags: ["no fixed address","rotating","ocean plastic","underrated"]
+  },
+  {
+    name: "Nurdle Accumulation Zone",
+    type: "Pre-production plastic pellet spill \u00b7 Global coastlines",
+    address: "No fixed address \u00b7 Every beach \u00b7 Shipped by accident since 1970s",
+    stars: 1, category: "Ocean & water", wasteType: "Plastic",
+    reviewShort: "Billions of plastic pellets on every beach. Nobody ordered these.",
+    reviewFull: "Nurdles are the raw material pellets used to manufacture all plastic products. Spilled during shipping, production, and transport \u2014 billions end up on coastlines worldwide. They look like fish eggs. Fish eat them. You eat fish. Sri Lanka\u2019s 2021 MV X-Press Pearl spill released 1,680 containers worth onto South Asian beaches. No address. No liability. On every shore.",
+    sig: "\u2014 Posted from: the tideline",
+    pinNote: "Pinned to the MV X-Press Pearl wreck site, 9.5 nautical miles off Colombo, Sri Lanka. The ship sank in May 2021 after an onboard fire, releasing the largest nurdle spill in recorded history.",
+    lat: 6.9271, lng: 79.6780, tags: ["every beach","fish food","unscheduled delivery","nurdles"]
+  },
+  {
+    name: "Pharmaceutical Residue in European Rivers",
+    type: "Waterway pharmaceutical contamination \u00b7 EU",
+    address: "No fixed address \u00b7 70% of EU waterways \u00b7 Via sewage",
+    stars: 2, category: "Ocean & water", wasteType: "Mixed",
+    reviewShort: "Antidepressants, antibiotics, hormones. In most rivers. Nobody planned this.",
+    reviewFull: "Found in 70% of European river systems \u2014 antidepressants, antibiotics, contraceptive hormones, painkillers. Pass through human bodies, through sewage systems, and into waterways. Fish downstream of major cities display hormonal disruption. Mussels in the Thames test positive for cocaine and ketamine. Nobody planned this distribution network. It runs itself. Two stars because the Thames fish seem oddly relaxed.",
+    sig: "\u2014 Posted from: the Danube, approximately",
+    pinNote: "Pinned to Teddington Weir, Thames, London \u2014 the tidal limit and one of the most studied pharmaceutical hotspots in European freshwater research. Downstream mussels have tested positive for over 40 pharmaceutical compounds.",
+    lat: 51.4213, lng: -0.3317, tags: ["river","pharmaceutical","unplanned","hormones"]
+  },
+  {
+    name: "Agricultural Nitrous Oxide Belt, Netherlands",
+    type: "Atmospheric nitrogen emission \u00b7 Northern Europe",
+    address: "No fixed address \u00b7 Above Dutch dairy regions \u00b7 Permanent resident",
+    stars: 1, category: "Atmosphere", wasteType: "Organic",
+    reviewShort: "Invisible greenhouse gas above one of the world\u2019s densest livestock regions.",
+    reviewFull: "The Netherlands has more livestock per square kilometre than almost anywhere on earth. Nitrogen and nitrous oxide emissions from manure and fertiliser have created a permanent atmospheric overhang. N\u2082O is 273 times more potent than CO\u2082 over 100 years. The Dutch government has been trying to address this for years. The farmers have opinions. The gas has no address and does not care about the debate.",
+    sig: "\u2014 Posted from: above Friesland",
+    pinNote: "Pinned to Leeuwarden, Friesland \u2014 capital of the Netherlands\u2019 most intensive dairy province and epicentre of the nitrogen crisis that triggered nationwide farmer protests from 2019 onwards.",
+    lat: 53.2012, lng: 5.7999, tags: ["atmosphere","dairy","nitrogen","political"]
+  },
+  {
+    name: "Light Pollution Dome, Jakarta",
+    type: "Wasted photon emission \u00b7 Southeast Asia",
+    address: "No fixed address \u00b7 Sky above Greater Jakarta \u00b7 Pop. 34 million",
+    stars: 2, category: "Atmosphere", wasteType: "Mixed",
+    reviewShort: "Technically waste. Everywhere above the city. Stars: zero visible.",
+    reviewFull: "Light pollution is classified as waste \u2014 energy emitted uselessly into the sky, disrupting circadian rhythms in humans, birds, insects, and marine life. Jakarta\u2019s light dome is visible from 200km away. The Milky Way has not been seen from central Jakarta since approximately 1990. Two stars because the city looks impressive from the plane. One star removed for every star now invisible from the ground.",
+    sig: "\u2014 Posted from: somewhere above the smog",
+    pinNote: "Pinned to Monas, the National Monument at the geographic centre of Jakarta \u2014 ground zero of the light dome. On a clear night the sky above glows orange from 200km out.",
+    lat: -6.1754, lng: 106.8272, tags: ["light pollution","overhead","technically waste","stars not included"]
+  },
+  {
+    name: "Polyester Microfibres in Arctic Snow",
+    type: "Atmospheric textile fibre transport \u00b7 Arctic",
+    address: "No fixed address \u00b7 Arctic Circle \u00b7 Arrived via atmosphere",
+    stars: 1, category: "Soil & land", wasteType: "Textile",
+    reviewShort: "Synthetic fibres from washing machines. Found in Arctic snow.",
+    reviewFull: "Every synthetic garment wash sheds thousands of microfibres. These travel via wastewater, atmosphere, and ocean currents to the Arctic. Researchers found 14,000 microplastic particles per litre of Arctic snow in 2019. The fibres came from polyester fleeces, nylon sportswear, and fast fashion basics. The Arctic did not request them. Arrival method: still being studied. Presence: confirmed.",
+    sig: "\u2014 Posted from: Svalbard, 78\u00b0N",
+    pinNote: "Pinned to Ny-\u00c5lesund Research Station, Svalbard \u2014 78\u00b0N, one of the world\u2019s northernmost permanently inhabited places and site of the 2019 study confirming 14,000 microplastic particles per litre of Arctic snow.",
+    lat: 78.9232, lng: 11.9232, tags: ["arctic","textile","microfibres","fast fashion"]
+  },
+  {
+    name: "Carbon Offset \u2018Forest\u2019, Unspecified Location",
+    type: "Theoretical environmental asset \u00b7 Accounting",
+    address: "No fixed address \u00b7 Coordinates available upon purchase \u00b7 May not exist",
+    stars: 2, category: "Policy & greenwashing", wasteType: "Mixed",
+    reviewShort: "Purchased by several airlines. Visited by nobody. Possibly imaginary.",
+    reviewFull: "Paid for by numerous corporations as part of their net-zero commitments. Location described as \u2018protected forest in [region].\u2019 Multiple investigations by The Guardian, Zeit, and SourceMaterial found many offset projects protect trees never at risk, or forests later cleared anyway. One credit = one tonne of CO\u2082 = one marketing claim. Two stars for the brochure photography. One star removed because the forest may be a spreadsheet.",
+    sig: "\u2014 Posted from: an accounting document",
+    pinNote: "Pinned to Madre de Dios, Peru \u2014 one of the most investigated carbon offset regions in the Amazon, where a 2023 Guardian/Zeit investigation found credits were issued for forest facing no real deforestation threat. The trees were fine. The credits were not.",
+    lat: -11.9875, lng: -70.9318, tags: ["greenwashing","net-zero","theoretical","carbon credits"]
+  }
+];
+/* ══ end locations ══ */
+
+const CATEGORIES = ["Ocean & water","Atmosphere","Soil & land","Corporate","Policy & greenwashing"];
+const WASTE_TYPES = ["Plastic","Organic","Textile","E-waste","Mixed"];
+
+function starStr(n){return"\u2605".repeat(n)+"\u2606".repeat(5-n);}
+
+let activeCat=null, activeWaste=null, activeIdx=-1;
+let map, clusterGroup, markers=[];
+
+function buildFilters(){
+  const cf=document.getElementById('cat-filters');
+  CATEGORIES.forEach(c=>{
+    const b=document.createElement('button');
+    b.className='filter-btn';b.textContent=c;
+    b.onclick=()=>{
+      activeCat=activeCat===c?null:c;
+      document.querySelectorAll('#cat-filters .filter-btn').forEach(x=>x.classList.remove('active'));
+      if(activeCat)b.classList.add('active');
+      applyFilters();
+    };
+    cf.appendChild(b);
+  });
+  const wf=document.getElementById('waste-filters');
+  WASTE_TYPES.forEach(w=>{
+    const b=document.createElement('button');
+    b.className='filter-btn waste';b.textContent=w;
+    b.onclick=()=>{
+      activeWaste=activeWaste===w?null:w;
+      document.querySelectorAll('#waste-filters .filter-btn').forEach(x=>x.classList.remove('active'));
+      if(activeWaste)b.classList.add('active');
+      applyFilters();
+    };
+    wf.appendChild(b);
+  });
+}
+
+function applyFilters(){
+  const q=document.getElementById('search-input').value.toLowerCase().trim();
+  let count=0;
+  clusterGroup.clearLayers();
+  LOCATIONS.forEach((p,i)=>{
+    const cm=!activeCat||p.category===activeCat;
+    const wm=!activeWaste||p.wasteType===activeWaste;
+    const sm=!q||[p.name,p.reviewShort,p.reviewFull,p.category,p.wasteType,...p.tags].join(' ').toLowerCase().includes(q);
+    const vis=cm&&wm&&sm;
+    const el=document.getElementById('item-'+i);
+    if(el)el.classList.toggle('hidden',!vis);
+    if(vis){clusterGroup.addLayer(markers[i]);count++;}
+  });
+  const nr=document.getElementById('list-panel').querySelector('.no-results');
+  if(nr)nr.remove();
+  if(count===0){
+    const d=document.createElement('div');
+    d.className='no-results';
+    d.textContent='No locations match. Try removing a filter or clearing the search.';
+    document.getElementById('list-panel').appendChild(d);
+  }
+  document.getElementById('result-count').textContent=count+' location'+(count===1?'':'s')+' shown';
+}
+
+function renderList(){
+  const panel=document.getElementById('list-panel');
+  document.getElementById('result-count').textContent=LOCATIONS.length+' locations';
+  panel.innerHTML=LOCATIONS.map((p,i)=>`
+    <div class="place-item" id="item-${i}" onclick="showDetail(${i})">
+      <div class="place-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="#EA4335"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
+      <div class="place-info">
+        <h3>${p.name}</h3>
+        <div class="place-meta"><span class="place-stars">${starStr(p.stars)}</span><span class="place-star-num">${p.stars}.0</span></div>
+        <div class="place-address">${p.address}</div>
+        <div class="place-snippet">${p.reviewShort}</div>
+        <div class="place-chips"><span class="chip cat">${p.category}</span><span class="chip waste">${p.wasteType}</span></div>
+        <div class="place-tagline">Could not find this on Google Maps. It found me.</div>
+      </div>
+    </div>`).join('');
+}
+
+function initMap(){
+  map=L.map('map',{zoomControl:true,scrollWheelZoom:true}).setView([20,10],2);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom:18
+  }).addTo(map);
+  clusterGroup=L.markerClusterGroup({maxClusterRadius:60,spiderfyOnMaxZoom:true,showCoverageOnHover:false});
+  const mkIcon=active=>L.divIcon({
+    className:'',
+    html:`<svg width="${active?32:24}" height="${active?48:36}" viewBox="0 0 24 36"><path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 24 12 24s12-15 12-24C24 5.373 18.627 0 12 0z" fill="${active?'#1a73e8':'#EA4335'}"/><circle cx="12" cy="12" r="5" fill="white"/></svg>`,
+    iconSize:[active?32:24,active?48:36],iconAnchor:[active?16:12,active?48:36],popupAnchor:[0,active?-48:-36]
+  });
+  LOCATIONS.forEach((p,i)=>{
+    const m=L.marker([p.lat,p.lng],{icon:mkIcon(false)})
+      .bindPopup(`<div class="nm-popup"><div class="nm-popup-title">${p.name}</div><div class="nm-popup-address">${p.address}</div><div class="nm-popup-stars">${starStr(p.stars)} ${p.stars}.0</div><div class="nm-popup-tagline">"Could not find this on Google Maps. It found me."</div></div>`,{maxWidth:260});
+    m.on('click',()=>showDetail(i));
+    m._mkIcon=mkIcon;
+    markers.push(m);
+    clusterGroup.addLayer(m);
+  });
+  map.addLayer(clusterGroup);
+}
+
+function showDetail(i){
+  const p=LOCATIONS[i];
+  if(activeIdx>=0&&markers[activeIdx])markers[activeIdx].setIcon(markers[activeIdx]._mkIcon(false));
+  activeIdx=i;
+  markers[i].setIcon(markers[i]._mkIcon(true));
+  document.getElementById('list-panel').style.display='none';
+  document.getElementById('detail-panel').classList.add('visible');
+  document.getElementById('d-name').textContent=p.name;
+  document.getElementById('d-type').textContent=p.type;
+  document.getElementById('d-num').textContent=p.stars+'.0';
+  document.getElementById('d-stars').textContent=starStr(p.stars);
+  document.getElementById('d-review').textContent=p.reviewFull;
+  document.getElementById('d-sig').textContent=p.sig;
+  document.getElementById('d-pin-note').textContent=p.pinNote;
+  document.getElementById('d-tags').innerHTML=p.tags.map(t=>`<span class="tag">${t}</span>`).join('');
+  document.querySelectorAll('.place-item').forEach((el,idx)=>el.classList.toggle('active',idx===i));
+  map.flyTo([p.lat,p.lng],6,{duration:1.4,easeLinearity:0.4});
+  setTimeout(()=>markers[i].openPopup(),1500);
+}
+
+function showList(){
+  if(activeIdx>=0&&markers[activeIdx])markers[activeIdx].setIcon(markers[activeIdx]._mkIcon(false));
+  activeIdx=-1;
+  document.getElementById('list-panel').style.display='block';
+  document.getElementById('detail-panel').classList.remove('visible');
+  markers.forEach(m=>m.closePopup());
+  map.flyTo([20,10],2,{duration:1.2});
+}
+
+function shareLocation(){
+  if(activeIdx<0)return;
+  const p=LOCATIONS[activeIdx];
+  if(navigator.share){navigator.share({title:p.name,text:p.reviewShort+' \u2014 Nowhere Maps',url:window.location.href});}
+  else{navigator.clipboard.writeText(window.location.href).then(()=>alert('Link copied to clipboard'));}
+}
+function saveLocation(){alert('Save feature coming soon. For now: screenshot it.');}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  buildFilters();
+  renderList();
+  initMap();
+  document.getElementById('search-input').addEventListener('input',applyFilters);
+});
+</script>
+</body>
+</html>
