@@ -434,7 +434,7 @@ function toggleFix() {
   const t = document.getElementById('fix-toggle');
   t.classList.toggle('on', fixingMode);
   document.getElementById('toggle-label').textContent =
-    fixingMode ? 'Showing: what they're fixing' : 'Show: what they're fixing';
+    fixingMode ? "Showing: what they're fixing" : "Show: what they're fixing";
   renderList();
   markers.forEach((m, i) => m.setIcon(getIcon(i, i === activeIdx)));
 }
