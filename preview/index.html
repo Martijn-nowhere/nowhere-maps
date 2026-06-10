@@ -235,7 +235,7 @@ a{color:#1a73e8;text-decoration:none;}a:hover{text-decoration:underline;}
         </div>
         <div class="field" style="max-width:220px;">
           <label class="field-label">Repo (owner/name)</label>
-          <input type="text" id="gh-repo" class="text-input" placeholder="Martijn-nowhere/nowhere-maps" style="margin-bottom:0;"/>
+          <input type="text" id="gh-repo" class="text-input" placeholder="Martijn-nowhere/nowhere-maps" value="Martijn-nowhere/nowhere-maps" style="margin-bottom:0;"/>
         </div>
       </div>
       <button class="action-btn github" onclick="pushToGitHub()">
@@ -836,7 +836,7 @@ html,body{height:100%;font-family:'Roboto',Arial,sans-serif;font-size:14px;color
     <div class="modal-tagline">"${cfg.tagline}"</div>
     <div class="modal-body">
       This preview was generated from ${cfg.company}'s own sustainability report using NoWhere Maps — a satirical project that pins real environmental phenomena to the map, written as deadpan Google Maps reviews.<br/><br/>
-      The pins below are based on facts in the report and documented industry context. Green markers indicate issues where the company has named an active response. Grey markers are the rest.
+      The pins reflect what's in the report — and what the report doesn't mention. Green markers show issues where the company has named a concrete response. The rest are still on the map.
     </div>
     <button class="modal-close" onclick="closeModal()">Show me the map</button>
   </div>
