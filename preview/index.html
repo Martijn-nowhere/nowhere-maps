@@ -372,7 +372,7 @@ async function startGenerate() {
   setProgress(35, 'Sending to Claude…', 'Analysing report and generating pins');
 
   let raw;
-  try { raw = await callClaude(apiKey, buildPrompt(company, color, pdfText)); }
+  try { raw = await callClaude(apiKey, buildPrompt(company, color1, pdfText)); }
   catch(e) { showSection('form'); showError('error-box', 'API error: ' + e.message); return; }
 
   setProgress(80, 'Building branded page…', 'Assembling HTML output');
@@ -393,7 +393,7 @@ async function startGenerate() {
 }
 
 /* ─── Claude prompt ─────────────────────────────────────── */
-function buildPrompt(company, color, pdfText) {
+function buildPrompt(company, color1, pdfText) {
   return `You are generating content for NoWhere Maps — a satirical Google Maps-style project that pins real environmental impacts to geographic locations, written as deadpan 1-star review copy.
 
 LANGUAGE: Detect the language of the report and write ALL output — pin names, addresses, reviewShort, reviewFull, sig, pinNote, tagline, customCategory, respondsNote — in that same language. If the report is in Dutch, write in Dutch. If in German, write in German. If in English, write in English. Match the language exactly, including the signature format (e.g. "— Geplaatst vanuit: [locatie]" for Dutch).
