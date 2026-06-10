@@ -470,29 +470,61 @@ async function startGenerate() {
 
 /* ─── Claude prompt ─────────────────────────────────────── */
 function buildPrompt(company, color1, pdfText, tone) {
-  const toneBlock = tone === 'corporate' ? `
-EDITION: Company edition (honest self-reflection)
+  const isCorp = tone === 'corporate';
+
+  const toneRules = isCorp ? `
+EDITION: Company edition — honest self-reflection
+This is commissioned by or for the company itself. The goal is honest, credible mapping of where their environmental story actually plays out — the good and the unresolved. NOT greenwashing. NOT advocacy. Fair witness.
+
 TONE RULES (strict):
-- Same deadpan style, same real facts — but the company gets benefit of the doubt.
-- Frame issues as "what they're working on" not "what they're hiding."
-- Acknowledge genuine progress where the report shows it — don't suppress it.
-- Honest and dry, never cheerful, never greenwashing, never preachy.
-- The review voice is still that of an independent observer — just a fair one.
-- companyResponds pins should feel like transparency, not spin.
-- Signature format: "— Posted from: [wry but not hostile location]"
-- reviewFull kicker: wry observation, not a stinger.` : `
-EDITION: NGO / Media edition (advocacy)
+- Same deadpan, dry style — but the reviewer is a fair, impartial observer, not an activist.
+- Acknowledge genuine progress explicitly. If the company has a concrete target or active programme for this issue, that is part of the story.
+- Problems are real and named — but framed as "still in progress" or "where the work is" rather than "what they're hiding."
+- Never cheerful, never spin, never preachy.
+- companyResponds pins are the backbone — lean toward true when the report shows real action.
+- stars: 1 for unresolved issues, 2 for issues with credible active programmes, 3 for genuine documented progress (rare, only if evidence is strong).
+- reviewFull kicker: dry acknowledgement of complexity, not a stinger. End on the open question, not the verdict.
+- Signature format: "— Geplaatst vanuit: [observational, wry but not hostile location]" (or translated equivalent)
+
+TONE EXAMPLES (corporate edition):
+reviewShort: "Vijftien jaar reductiedoelstelling. Tien jaar te gaan."
+reviewShort: "Scope 3 in kaart gebracht. Nog niet opgelost."
+sig: "— Geplaatst vanuit: een ingevuld duurzaamheidsformulier"
+sig: "— Geplaatst vanuit: de derde pagina van het jaarverslag"
+kicker: "Het programma loopt. De deadline ook."
+kicker: "Goed nieuws: er is een werkgroep. Slecht nieuws: er is een werkgroep."` : `
+EDITION: NGO / Media edition — advocacy
 TONE RULES (strict):
 - Deadpan. No activism energy. No moralising. Trust the audience.
 - Written as a genuine Google Maps review left by someone who happened to be there.
 - Funny and factually credible at the same time.
 - The humour comes from the gap between the mundane review format and the gravity of the subject.
-- Signature format: "— Posted from: [absurd but fitting location]"`;
+- stars: almost always 1, occasionally 2, never more unless genuinely surprising.
+- Signature format: "— Posted from: [absurd but fitting location]"
 
-  return `You are generating content for NoWhere Maps — a satirical Google Maps-style project that pins real environmental impacts to geographic locations, written as deadpan 1-star review copy.
+TONE EXAMPLES (advocacy edition):
+reviewShort: "421ppm and climbing. Invisible, odourless, planet-wide."
+reviewShort: "Intimate venue. Did not book. Already checked in."
+sig: "— Posted from: an accounting document"
+sig: "— Posted from: the bottom of a plastic container"
+kicker: "Two stars because the water pressure was fine."`;
+
+  const taglineInstruction = isCorp
+    ? `"One dry, honest line that captures where this company is in its sustainability journey. Acknowledges progress and open questions. Max 12 words. No exclamation marks."`
+    : `"One dry, deadpan line that captures this company's environmental situation. Max 12 words. No exclamation marks."`;
+
+  const starsRule = isCorp
+    ? `- stars: 1 = issue present and unresolved; 2 = credible active programme exists; 3 = documented genuine progress (use sparingly)`
+    : `- stars: almost always 1, occasionally 2, never more unless genuinely surprising`;
+
+  const respondsRule = isCorp
+    ? `- companyResponds: lean toward true when the report shows any named action, target, or programme for this issue — transparency is the point`
+    : `- companyResponds: true only when the report explicitly addresses that specific issue with a named action, target, or programme`;
+
+  return `You are generating content for NoWhere Maps — a project that pins real environmental impacts to geographic locations, written as deadpan Google Maps-style review copy.
 
 LANGUAGE: Detect the language of the report and write ALL output — pin names, addresses, reviewShort, reviewFull, sig, pinNote, tagline, customCategory, respondsNote — in that same language. If the report is in Dutch, write in Dutch. If in German, write in German. If in English, write in English. Match the language exactly, including the signature format (e.g. "— Geplaatst vanuit: [locatie]" for Dutch).
-${toneBlock}
+${toneRules}
 
 PIN SCHEMA (JSON):
 {
@@ -503,22 +535,15 @@ PIN SCHEMA (JSON):
   "category": "Ocean & water" | "Atmosphere" | "Soil & land" | "Corporate" | "Policy & greenwashing" | "[customCategory]",
   "wasteType": "Plastic" | "Organic" | "Textile" | "E-waste" | "Mixed",
   "reviewShort": "One punchy sentence. 10–20 words. The hook.",
-  "reviewFull": "2–4 sentences in review style. Real facts and figures. Dry kicker at the end.",
-  "sig": "— Posted from: [absurd location]",
+  "reviewFull": "2–4 sentences in review style. Real facts and figures. Kicker at the end.",
+  "sig": "— Posted from: [location]",
   "pinNote": "Factual footnote explaining why this specific location was chosen. Reads like a serious endnote.",
   "lat": 0.0,
   "lng": 0.0,
   "tags": ["tag1","tag2","tag3"],
   "companyResponds": true or false,
-  "respondsNote": "If companyResponds is true: one sentence describing what the company says it is doing about this specific issue. Verbatim from the report if possible. Deadpan."
+  "respondsNote": "If companyResponds is true: one sentence describing what the company says it is doing about this specific issue. Verbatim from the report if possible."
 }
-
-TONE EXAMPLES:
-reviewShort: "421ppm and climbing. Invisible, odourless, planet-wide."
-reviewShort: "Intimate venue. Did not book. Already checked in."
-sig: "— Posted from: an accounting document"
-sig: "— Posted from: the bottom of a plastic container"
-kicker example: "Two stars because the water pressure was fine."
 
 COMPANY: ${company}
 
@@ -532,13 +557,13 @@ TASK: Analyse this report. Generate exactly 10 pins tied to real geographic loca
 Rules:
 - At least 3 different categories (use the custom category for industry-specific pins)
 - At least 2 different wasteTypes
-- stars: almost always 1, occasionally 2, never more unless genuinely surprising
-- companyResponds: true only when the report explicitly addresses that specific issue with a named action, target, or programme
+${starsRule}
+${respondsRule}
 - Coordinates must be real, precise, and meaningful — pin to the actual relevant factory, port, river, region
 
 RETURN a single JSON object with exactly these fields — no markdown, no preamble:
 {
-  "tagline": "One dry, deadpan line that captures this company's environmental situation. Max 12 words. No exclamation marks.",
+  "tagline": ${taglineInstruction},
   "customCategory": "Short industry-specific category name (e.g. 'Dairy & livestock' or 'Fast food' or 'Packaging')",
   "hqLat": 0.0,
   "hqLng": 0.0,
