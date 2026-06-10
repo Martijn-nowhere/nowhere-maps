@@ -1080,7 +1080,7 @@ function showDetail(i) {
   }
 
   document.querySelectorAll('.place-item').forEach((el, idx) => el.classList.toggle('active', idx === i));
-  map.flyTo([p.lat, p.lng], 6, { duration: 1.4, easeLinearity: 0.4 });
+  map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 13), { duration: 1.4, easeLinearity: 0.4 });
   setTimeout(() => { if (markers[i]) markers[i].openPopup(); }, 1500);
 }
 
