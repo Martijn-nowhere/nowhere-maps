@@ -380,6 +380,8 @@ async function startGenerate() {
 function buildPrompt(company, color, pdfText) {
   return `You are generating content for NoWhere Maps — a satirical Google Maps-style project that pins real environmental impacts to geographic locations, written as deadpan 1-star review copy.
 
+LANGUAGE: Detect the language of the report and write ALL output — pin names, addresses, reviewShort, reviewFull, sig, pinNote, tagline, customCategory, respondsNote — in that same language. If the report is in Dutch, write in Dutch. If in German, write in German. If in English, write in English. Match the language exactly, including the signature format (e.g. "— Geplaatst vanuit: [locatie]" for Dutch).
+
 TONE RULES (strict):
 - Deadpan. No activism energy. No moralising. Trust the audience.
 - Written as a genuine Google Maps review left by someone who happened to be there.
