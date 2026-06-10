@@ -265,8 +265,8 @@ let generatedHTML = '', generatedSlug = '';
 
 /* ─── init ──────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
-  if (CONFIG.ANTHROPIC_API_KEY) document.getElementById('api-key-section').style.display = 'none';
-  onColorChange('#EA4335');
+  loadSavedKeys();
+  onColorChange(1, '#EA4335');
   setupDrop('logo-zone', 'logo-input', onLogoDropped);
   setupDrop('pdf-zone', 'pdf-input', onPDFDropped);
   document.getElementById('company-name').addEventListener('input', e => {
@@ -276,6 +276,42 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('company-slug').addEventListener('input', validateForm);
 });
+
+function loadSavedKeys() {
+  /* Load API key */
+  const savedKey = localStorage.getItem('nm_anthropic_key');
+  if (CONFIG.ANTHROPIC_API_KEY || savedKey) {
+    const key = CONFIG.ANTHROPIC_API_KEY || savedKey;
+    const section = document.getElementById('api-key-section');
+    /* Replace input with a "saved" indicator, keep key accessible */
+    section.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#e6f4ea;border-radius:8px;font-size:12px;color:#137333;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="#137333"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      API key saved in browser
+      <button onclick="clearSavedKey()" style="margin-left:auto;font-size:11px;color:#70757a;background:none;border:none;cursor:pointer;text-decoration:underline;">Clear</button>
+    </div>
+    <input type="hidden" id="api-key" value="${key}"/>`;
+  }
+
+  /* Load GitHub token */
+  const savedToken = localStorage.getItem('nm_github_token');
+  if (savedToken) {
+    const el = document.getElementById('gh-token');
+    if (el) el.value = savedToken;
+  }
+}
+
+function clearSavedKey() {
+  localStorage.removeItem('nm_anthropic_key');
+  const section = document.getElementById('api-key-section');
+  section.innerHTML = `<input type="password" id="api-key" class="text-input" placeholder="sk-ant-..." oninput="validateForm()"/>
+    <div class="key-note">Need a key? <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>`;
+  validateForm();
+}
+
+function saveKeys(apiKey, ghToken) {
+  if (apiKey && !CONFIG.ANTHROPIC_API_KEY) localStorage.setItem('nm_anthropic_key', apiKey);
+  if (ghToken) localStorage.setItem('nm_github_token', ghToken);
+}
 
 function setupDrop(zoneId, inputId, handler) {
   const zone = document.getElementById(zoneId);
@@ -361,6 +397,7 @@ async function startGenerate() {
   const color2   = getColor(2) || color1;
   const color3   = getColor(3) || color1;
   const apiKey   = CONFIG.ANTHROPIC_API_KEY || document.getElementById('api-key').value.trim();
+  saveKeys(apiKey, document.getElementById('gh-token')?.value.trim());
 
   showSection('progress');
   setProgress(8, 'Reading PDF…', 'Extracting text from report');
@@ -535,6 +572,7 @@ function downloadResult() {
 /* ─── GitHub push ───────────────────────────────────────── */
 async function pushToGitHub() {
   const token = document.getElementById('gh-token').value.trim();
+  saveKeys(null, token);
   const repo  = document.getElementById('gh-repo').value.trim();
   hideError('gh-error-box');
   document.getElementById('gh-success').style.display = 'none';
