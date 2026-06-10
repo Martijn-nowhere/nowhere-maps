@@ -72,7 +72,7 @@ Please keep the SoR credit in the footer of the HTML file.
 
 ## License
 
-MIT — use it, fork it, adapt it. Credit appreciated.
+[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — free for NGO, media, editorial, and personal use. Commercial use requires a license. Contact: mmmhuizing@gmail.com
 
 ---
 
