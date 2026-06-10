@@ -134,14 +134,23 @@ a{color:#1a73e8;text-decoration:none;}a:hover{text-decoration:underline;}
         </div>
       </div>
 
-      <div class="field-row">
-        <div class="field">
-          <label class="field-label">Primary brand colour</label>
-          <div class="color-row">
-            <div class="color-swatch" id="color-swatch"><input type="color" id="brand-color" value="#EA4335" oninput="onColorChange(this.value)"/></div>
-            <input type="text" id="brand-color-hex" class="text-input" value="#EA4335" style="margin-bottom:0;" placeholder="#EA4335" oninput="onHexInput(this.value)"/>
+      <div class="field">
+        <label class="field-label">Brand colours <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#9aa0a6;">— primary · secondary (border/outline) · tertiary (chips/accents)</span></label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div class="color-row" style="flex:1;min-width:140px;">
+            <div class="color-swatch" id="color-swatch-1"><input type="color" id="brand-color-1" value="#EA4335" oninput="onColorChange(1,this.value)"/></div>
+            <input type="text" id="brand-hex-1" class="text-input" value="#EA4335" style="margin-bottom:0;" placeholder="Primary" oninput="onHexInput(1,this.value)"/>
+          </div>
+          <div class="color-row" style="flex:1;min-width:140px;">
+            <div class="color-swatch" id="color-swatch-2"><input type="color" id="brand-color-2" value="#EA4335" oninput="onColorChange(2,this.value)"/></div>
+            <input type="text" id="brand-hex-2" class="text-input" value="" style="margin-bottom:0;" placeholder="Secondary (optional)" oninput="onHexInput(2,this.value)"/>
+          </div>
+          <div class="color-row" style="flex:1;min-width:140px;">
+            <div class="color-swatch" id="color-swatch-3"><input type="color" id="brand-color-3" value="#EA4335" oninput="onColorChange(3,this.value)"/></div>
+            <input type="text" id="brand-hex-3" class="text-input" value="" style="margin-bottom:0;" placeholder="Tertiary (optional)" oninput="onHexInput(3,this.value)"/>
           </div>
         </div>
+        <div style="font-size:11px;color:#9aa0a6;margin-top:6px;line-height:1.5;">Primary = fills &amp; buttons · Secondary = pin borders &amp; sidebar outline · Tertiary = category chips &amp; tags. Leave blank to inherit from primary.</div>
       </div>
 
       <div class="field">
@@ -278,16 +287,20 @@ function setupDrop(zoneId, inputId, handler) {
   });
 }
 
-function onColorChange(v) {
-  document.getElementById('color-swatch').style.background = v;
-  document.getElementById('brand-color').value = v;
-  document.getElementById('brand-color-hex').value = v;
+function onColorChange(n, v) {
+  document.getElementById('color-swatch-' + n).style.background = v;
+  document.getElementById('brand-color-' + n).value = v;
+  document.getElementById('brand-hex-' + n).value = v;
 }
-function onHexInput(v) {
+function onHexInput(n, v) {
   if (/^#[0-9a-fA-F]{6}$/.test(v)) {
-    document.getElementById('brand-color').value = v;
-    document.getElementById('color-swatch').style.background = v;
+    document.getElementById('brand-color-' + n).value = v;
+    document.getElementById('color-swatch-' + n).style.background = v;
   }
+}
+function getColor(n) {
+  const v = document.getElementById('brand-hex-' + n).value.trim();
+  return /^#[0-9a-fA-F]{6}$/.test(v) ? v : null;
 }
 
 function onLogoSelected(input) { if (input.files[0]) onLogoDropped(input.files[0]); }
@@ -344,7 +357,9 @@ async function startGenerate() {
   hideError('error-box');
   const company  = document.getElementById('company-name').value.trim();
   const slug     = document.getElementById('company-slug').value.trim();
-  const color    = document.getElementById('brand-color-hex').value.trim() || '#EA4335';
+  const color1   = getColor(1) || '#EA4335';
+  const color2   = getColor(2) || color1;
+  const color3   = getColor(3) || color1;
   const apiKey   = CONFIG.ANTHROPIC_API_KEY || document.getElementById('api-key').value.trim();
 
   showSection('progress');
@@ -367,7 +382,8 @@ async function startGenerate() {
   catch(e) { showSection('form'); showError('error-box', 'Parse error: ' + e.message + '\n\n' + raw.slice(0, 300)); return; }
 
   generatedSlug = slug;
-  generatedHTML = buildOutputHTML({ company, slug, color, logo: logoDataURL,
+  generatedHTML = buildOutputHTML({ company, slug,
+    color1, color2, color3, logo: logoDataURL,
     tagline: parsed.tagline, customCategory: parsed.customCategory,
     hqLat: parsed.hqLat, hqLng: parsed.hqLng, pins: parsed.pins });
 
@@ -588,20 +604,23 @@ function resetForm() {
    Produces a fully self-contained branded preview page.
 ══════════════════════════════════════════════════════════ */
 function buildOutputHTML(cfg) {
-  /* cfg: { company, slug, color, logo, tagline, customCategory, hqLat, hqLng, pins[] } */
-  const c      = JSON.stringify(cfg.company);
-  const color  = JSON.stringify(cfg.color);
-  const logo   = JSON.stringify(cfg.logo);
-  const tl     = JSON.stringify(cfg.tagline);
-  const cat    = JSON.stringify(cfg.customCategory);
-  const hq     = JSON.stringify([cfg.hqLat, cfg.hqLng]);
-  const pins   = JSON.stringify(cfg.pins);
-  const slug   = cfg.slug;
+  /* cfg: { company, slug, color1, color2, color3, logo, tagline, customCategory, hqLat, hqLng, pins[] }
+     color1 = primary   → fills, buttons, cluster icons, modal CTA, toggle-on, active state
+     color2 = secondary → pin marker border, sidebar outline, topbar accent
+     color3 = tertiary  → category chips bg tint, tags, chip text
+  */
+  const c    = JSON.stringify(cfg.company);
+  const logo = JSON.stringify(cfg.logo);
+  const tl   = JSON.stringify(cfg.tagline);
+  const cat  = JSON.stringify(cfg.customCategory);
+  const hq   = JSON.stringify([cfg.hqLat, cfg.hqLng]);
+  const pins = JSON.stringify(cfg.pins);
+  const slug = cfg.slug;
 
-  /* Compute light tint of brand colour for chips/backgrounds */
-  const hex = cfg.color.replace('#','');
-  const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
-  const tint = `rgba(${r},${g},${b},0.12)`;
+  /* Tint from tertiary colour for chip backgrounds */
+  const hex3 = cfg.color3.replace('#','');
+  const r3 = parseInt(hex3.slice(0,2),16), g3 = parseInt(hex3.slice(2,4),16), b3 = parseInt(hex3.slice(4,6),16);
+  const tint = `rgba(${r3},${g3},${b3},0.13)`;
   const tintJSON = JSON.stringify(tint);
 
   return `<!DOCTYPE html>
@@ -620,13 +639,18 @@ function buildOutputHTML(cfg) {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
-:root{--brand:${cfg.color};--tint:${tint};}
+:root{
+  --brand:${cfg.color1};
+  --brand2:${cfg.color2};
+  --brand3:${cfg.color3};
+  --tint:${tint};
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;font-family:'Roboto',Arial,sans-serif;font-size:14px;color:#3c4043;background:#fff;}
 #app{display:flex;flex-direction:column;height:100vh;}
 
 /* topbar */
-#topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:#fff;border-bottom:1px solid #e0e0e0;box-shadow:0 1px 3px rgba(0,0,0,0.08);z-index:1000;flex-shrink:0;border-top:3px solid var(--brand);}
+#topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:#fff;border-bottom:1px solid #e0e0e0;box-shadow:0 1px 3px rgba(0,0,0,0.08);z-index:1000;flex-shrink:0;border-top:3px solid var(--brand2);}
 .logo-wrap{display:flex;align-items:center;gap:8px;flex-shrink:0;text-decoration:none;}
 .logo-text{font-family:'Google Sans',sans-serif;font-size:18px;letter-spacing:-0.5px;}
 .logo-text .n{color:#4285F4}.logo-text .o1{color:#EA4335}.logo-text .w{color:#FBBC04}.logo-text .h{color:#4285F4}.logo-text .e{color:#34A853}.logo-text .r{color:#EA4335}.logo-text .e2{color:#4285F4}
@@ -642,12 +666,12 @@ html,body{height:100%;font-family:'Roboto',Arial,sans-serif;font-size:14px;color
 /* toggle */
 .toggle-wrap{display:flex;align-items:center;gap:6px;font-size:11px;color:#5f6368;cursor:pointer;user-select:none;}
 .toggle{width:32px;height:18px;border-radius:9px;background:#dadce0;position:relative;transition:background 0.2s;flex-shrink:0;}
-.toggle.on{background:#34A853;}
+.toggle.on{background:var(--brand);}
 .toggle-knob{width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);}
 .toggle.on .toggle-knob{left:16px;}
 
 /* layout */
-#content{display:flex;flex:1;overflow:hidden;outline:3px solid var(--brand);}
+#content{display:flex;flex:1;overflow:hidden;outline:3px solid var(--brand2);}
 #sidebar{width:380px;flex-shrink:0;display:flex;flex-direction:column;background:#fff;overflow:hidden;box-shadow:2px 0 4px rgba(0,0,0,0.06);z-index:10;}
 #sidebar-header{padding:14px 16px 10px;border-bottom:1px solid #e8eaed;flex-shrink:0;}
 .sh-company{font-family:'Google Sans',sans-serif;font-size:15px;color:#202124;margin-bottom:2px;}
@@ -673,14 +697,14 @@ html,body{height:100%;font-family:'Roboto',Arial,sans-serif;font-size:14px;color
 .place-snippet{font-size:12px;color:#3c4043;line-height:1.5;}
 .place-chips{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;}
 .chip{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;}
-.chip.cat{background:var(--tint);color:var(--brand);}
+.chip.cat{background:var(--tint);color:var(--brand3);}
 .chip.waste{background:#e6f4ea;color:#137333;}
 
 /* detail */
 #detail-panel{display:none;flex-direction:column;flex:1;overflow:hidden;}
 #detail-panel.visible{display:flex;}
 #detail-header{padding:12px 16px 0;flex-shrink:0;}
-.back-btn{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--brand);cursor:pointer;border:none;background:none;padding:0;font-family:'Roboto',sans-serif;}
+.back-btn{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--brand1,var(--brand));cursor:pointer;border:none;background:none;padding:0;font-family:'Roboto',sans-serif;}
 .back-btn:hover{text-decoration:underline;}
 #detail-scroll{overflow-y:auto;flex:1;padding:0 16px 24px;}
 .detail-name{font-family:'Google Sans',sans-serif;font-size:22px;font-weight:400;color:#202124;line-height:1.3;margin-bottom:4px;}
@@ -690,7 +714,7 @@ html,body{height:100%;font-family:'Roboto',Arial,sans-serif;font-size:14px;color
 .detail-star-num-big{font-size:18px;font-weight:500;color:#202124;}
 .detail-rv-count{font-size:13px;color:#70757a;}
 .action-row{display:flex;gap:8px;margin-bottom:14px;}
-.act-btn{display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--tint);border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-family:'Roboto',sans-serif;font-size:11px;color:var(--brand);font-weight:500;min-width:64px;transition:opacity 0.12s;}
+.act-btn{display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--tint);border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-family:'Roboto',sans-serif;font-size:11px;color:var(--brand3);font-weight:500;min-width:64px;transition:opacity 0.12s;}
 .act-btn:hover{opacity:0.8;}
 .detail-divider{height:1px;background:#e8eaed;margin:10px 0;}
 .detail-section-label{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:#70757a;margin-bottom:6px;font-weight:500;}
@@ -732,7 +756,7 @@ html,body{height:100%;font-family:'Roboto',Arial,sans-serif;font-size:14px;color
 .modal-title{font-family:'Google Sans',sans-serif;font-size:18px;color:#202124;margin-bottom:8px;line-height:1.3;}
 .modal-tagline{font-size:14px;color:#EA4335;font-style:italic;margin-bottom:14px;}
 .modal-body{font-size:13px;color:#5f6368;line-height:1.7;margin-bottom:20px;}
-.modal-close{width:100%;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:'Google Sans',sans-serif;cursor:pointer;letter-spacing:0.2px;}
+.modal-close{width:100%;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:'Google Sans',sans-serif;cursor:pointer;letter-spacing:0.2px;transition:opacity 0.15s;}
 .modal-close:hover{opacity:0.88;}
 
 /* scrollbars */
@@ -874,7 +898,9 @@ html,body{height:100%;font-family:'Roboto',Arial,sans-serif;font-size:14px;color
 <script>
 const COMPANY       = ${c};
 const LOGO          = ${logo};
-const BRAND_COLOR   = ${color};
+const BRAND         = ${JSON.stringify(cfg.color1)};
+const BRAND2        = ${JSON.stringify(cfg.color2)};
+const BRAND3        = ${JSON.stringify(cfg.color3)};
 const BRAND_TINT    = ${tintJSON};
 const TAGLINE       = ${tl};
 const CUSTOM_CAT    = ${cat};
@@ -888,7 +914,7 @@ function starStr(n){ return '★'.repeat(n)+'☆'.repeat(5-n); }
 
 function mkMarkerHTML(active) {
   const sz = active ? 42 : 34;
-  return \`<div class="logo-marker-wrap \${active?'active':''}" style="width:\${sz}px;height:\${sz}px;border-color:\${BRAND_COLOR};">
+  return \`<div class="logo-marker-wrap \${active?'active':''}" style="width:\${sz}px;height:\${sz}px;border-color:\${BRAND2};">
     <img class="logo-marker-img" src="\${LOGO}" alt="\${COMPANY}"/>
   </div>\`;
 }
@@ -941,7 +967,7 @@ function initMap() {
       const count = cluster.getChildCount();
       const sz = count > 9 ? 46 : 38;
       return L.divIcon({ className:'', iconSize:[sz,sz],
-        html:\`<div style="width:\${sz}px;height:\${sz}px;border-radius:50%;border:3px solid \${BRAND_COLOR};background:\${BRAND_COLOR};display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;color:#fff;">\${count}</div>\`
+        html:\`<div style="width:\${sz}px;height:\${sz}px;border-radius:50%;border:3px solid \${BRAND2};background:\${BRAND};display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;color:#fff;">\${count}</div>\`
       });
     }
   });
@@ -970,7 +996,7 @@ function renderList() {
           ? \`<div style="width:36px;height:36px;border-radius:50%;border:2.5px solid #34A853;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;">
                <img src="\${LOGO}" style="width:100%;height:100%;object-fit:contain;padding:3px;"/>
              </div>\`
-          : \`<div style="width:36px;height:36px;border-radius:50%;border:2.5px solid \${BRAND_COLOR};background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+          : \`<div style="width:36px;height:36px;border-radius:50%;border:2.5px solid \${BRAND2};background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;">
                <img src="\${LOGO}" style="width:100%;height:100%;object-fit:contain;padding:3px;"/>
              </div>\`
         }
