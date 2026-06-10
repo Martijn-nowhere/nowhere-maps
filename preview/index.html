@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NoWhere Maps — Preview Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{min-height:100%;font-family:'Roboto',Arial,sans-serif;font-size:14px;color:#3c4043;background:#f8f9fa;}
+a{color:#1a73e8;text-decoration:none;}a:hover{text-decoration:underline;}
+
+/* topbar */
+#topbar{display:flex;align-items:center;gap:12px;padding:10px 24px;background:#fff;border-bottom:1px solid #e0e0e0;box-shadow:0 1px 3px rgba(0,0,0,0.08);position:sticky;top:0;z-index:100;}
+.logo-wrap{display:flex;align-items:center;gap:8px;flex-shrink:0;text-decoration:none;}
+.logo-text{font-family:'Google Sans',sans-serif;font-size:20px;letter-spacing:-0.5px;}
+.logo-text .n{color:#4285F4}.logo-text .o1{color:#EA4335}.logo-text .w{color:#FBBC04}.logo-text .h{color:#4285F4}.logo-text .e{color:#34A853}.logo-text .r{color:#EA4335}.logo-text .e2{color:#4285F4}
+.logo-divider{width:1px;height:24px;background:#e0e0e0;}
+.topbar-badge{font-size:11px;color:#5f6368;background:#f1f3f4;padding:3px 10px;border-radius:12px;}
+.topbar-link{margin-left:auto;font-size:12px;color:#1a73e8;}
+
+/* page layout */
+#page{max-width:760px;margin:0 auto;padding:40px 24px 80px;}
+.page-heading{font-family:'Google Sans',sans-serif;font-size:26px;font-weight:400;color:#202124;margin-bottom:6px;}
+.page-sub{font-size:13px;color:#70757a;line-height:1.6;margin-bottom:32px;}
+
+/* form card */
+.card{background:#fff;border-radius:12px;border:1px solid #e0e0e0;padding:24px;margin-bottom:20px;}
+.card-title{font-family:'Google Sans',sans-serif;font-size:15px;font-weight:400;color:#202124;margin-bottom:4px;}
+.card-sub{font-size:12px;color:#70757a;margin-bottom:18px;line-height:1.5;}
+.field-label{font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:#9aa0a6;margin-bottom:5px;font-weight:500;display:block;}
+.field-row{display:flex;gap:12px;margin-bottom:16px;}
+.field-row .field{flex:1;min-width:0;}
+.field{margin-bottom:16px;}
+.text-input{width:100%;padding:9px 12px;border:1px solid #dadce0;border-radius:8px;font-size:13px;font-family:'Roboto',sans-serif;color:#3c4043;outline:none;transition:border-color 0.15s,box-shadow 0.15s;}
+.text-input:focus{border-color:#1a73e8;box-shadow:0 0 0 2px rgba(26,115,232,0.15);}
+.color-row{display:flex;align-items:center;gap:10px;}
+.color-swatch{width:36px;height:36px;border-radius:8px;border:1px solid #dadce0;cursor:pointer;overflow:hidden;flex-shrink:0;}
+.color-swatch input[type=color]{width:200%;height:200%;margin:-25%;border:none;padding:0;cursor:pointer;}
+.drop-zone{border:2px dashed #dadce0;border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:border-color 0.15s,background 0.15s;position:relative;overflow:hidden;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:#1a73e8;background:#f0f6ff;}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.drop-text{font-size:12px;color:#70757a;line-height:1.6;pointer-events:none;}
+.drop-text strong{color:#1a73e8;}
+.file-chosen{font-size:12px;color:#34A853;font-weight:500;margin-top:4px;}
+.logo-preview-wrap{display:flex;align-items:center;gap:10px;margin-top:6px;}
+.logo-thumb{width:44px;height:44px;border-radius:8px;object-fit:contain;border:1px solid #e0e0e0;background:#f8f9fa;}
+.key-note{font-size:11px;color:#9aa0a6;line-height:1.5;margin-top:-10px;margin-bottom:14px;}
+
+/* generate button */
+.generate-btn{width:100%;padding:12px;background:#1a73e8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:'Google Sans',sans-serif;cursor:pointer;transition:background 0.15s;letter-spacing:0.2px;}
+.generate-btn:hover{background:#1557b0;}
+.generate-btn:disabled{background:#dadce0;color:#9aa0a6;cursor:not-allowed;}
+
+/* progress */
+#progress-section{display:none;}
+.progress-card{background:#fff;border-radius:12px;border:1px solid #e0e0e0;padding:32px 24px;text-align:center;}
+.progress-icon{margin-bottom:16px;}
+.progress-title{font-family:'Google Sans',sans-serif;font-size:17px;color:#202124;margin-bottom:6px;}
+.progress-sub{font-size:13px;color:#70757a;margin-bottom:20px;line-height:1.5;}
+.progress-bar-wrap{width:100%;height:4px;background:#e8eaed;border-radius:2px;overflow:hidden;margin-bottom:8px;}
+.progress-bar{height:100%;background:#1a73e8;border-radius:2px;transition:width 0.6s ease;width:0%;}
+.progress-step{font-size:11px;color:#9aa0a6;}
+
+/* result */
+#result-section{display:none;}
+.result-card{background:#fff;border-radius:12px;border:1px solid #e0e0e0;overflow:hidden;margin-bottom:16px;}
+.result-header{padding:20px 24px;border-bottom:1px solid #f1f3f4;}
+.result-company-row{display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+.result-logo{width:36px;height:36px;border-radius:6px;object-fit:contain;border:1px solid #e0e0e0;}
+.result-company-name{font-family:'Google Sans',sans-serif;font-size:18px;color:#202124;}
+.result-tagline{font-size:13px;color:#5f6368;font-style:italic;line-height:1.5;margin-bottom:12px;}
+.result-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.action-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;font-family:'Roboto',sans-serif;cursor:pointer;border:none;transition:all 0.12s;}
+.action-btn.primary{background:#1a73e8;color:#fff;}
+.action-btn.primary:hover{background:#1557b0;}
+.action-btn.secondary{background:#f1f3f4;color:#3c4043;}
+.action-btn.secondary:hover{background:#e8eaed;}
+.action-btn.github{background:#24292e;color:#fff;}
+.action-btn.github:hover{background:#1b1f23;}
+.pin-list{list-style:none;}
+.pin-row{display:flex;align-items:flex-start;gap:12px;padding:14px 24px;border-bottom:1px solid #f1f3f4;}
+.pin-row:last-child{border-bottom:none;}
+.pin-dot{width:10px;height:10px;border-radius:50%;background:#EA4335;flex-shrink:0;margin-top:5px;}
+.pin-dot.has-fix{background:#34A853;}
+.pin-info{flex:1;min-width:0;}
+.pin-name{font-size:13px;font-weight:500;color:#202124;margin-bottom:2px;}
+.pin-short{font-size:12px;color:#70757a;line-height:1.4;}
+.pin-badge{font-size:10px;padding:2px 7px;border-radius:10px;background:#e6f4ea;color:#137333;font-weight:500;margin-left:6px;vertical-align:middle;}
+
+/* github push */
+.gh-section{background:#fff;border-radius:12px;border:1px solid #e0e0e0;padding:20px 24px;}
+.gh-title{font-size:14px;font-weight:500;color:#202124;margin-bottom:4px;}
+.gh-sub{font-size:12px;color:#70757a;line-height:1.5;margin-bottom:14px;}
+.gh-row{display:flex;gap:8px;}
+.gh-row .text-input{margin-bottom:0;}
+
+/* error */
+.error-box{background:#fce8e6;border-radius:8px;padding:12px 14px;font-size:12px;color:#c5221f;line-height:1.6;margin-top:12px;display:none;}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <a class="logo-wrap" href="../">
+    <svg width="24" height="24" viewBox="0 0 28 28" fill="none"><path d="M14 2C8.477 2 4 6.477 4 12c0 7.5 10 16 10 16s10-8.5 10-16c0-5.523-4.477-10-10-10z" fill="#EA4335"/><circle cx="14" cy="12" r="4.5" fill="white"/></svg>
+    <div class="logo-text"><span class="n">N</span><span class="o1">o</span><span class="w">W</span><span class="h">h</span><span class="e">e</span><span class="r">r</span><span class="e2">e</span><span style="color:#5f6368;font-size:16px;margin-left:2px;">Maps</span></div>
+  </a>
+  <div class="logo-divider"></div>
+  <span class="topbar-badge">Preview Generator</span>
+  <a class="topbar-link" href="../">← Back to main map</a>
+</div>
+
+<div id="page">
+  <div class="page-heading">Generate a company preview</div>
+  <div class="page-sub">Upload a CSR/MVO/sustainability PDF. The tool reads it, generates 10 NoWhere Maps pins in the correct deadpan tone, and produces a fully branded, shareable HTML page — one per company, each unique.</div>
+
+  <!-- Form section -->
+  <div id="form-section">
+    <div class="card">
+      <div class="card-title">Company identity</div>
+      <div class="card-sub">Used for the header, map pins, and brand colour throughout the preview.</div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Company name</label>
+          <input type="text" id="company-name" class="text-input" placeholder="e.g. Unilever"/>
+        </div>
+        <div class="field" style="max-width:140px;">
+          <label class="field-label">URL slug</label>
+          <input type="text" id="company-slug" class="text-input" placeholder="e.g. unilever"/>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Brand colours <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#9aa0a6;">— primary · secondary (border/outline) · tertiary (chips/accents)</span></label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div class="color-row" style="flex:1;min-width:140px;">
+            <div class="color-swatch" id="color-swatch-1"><input type="color" id="brand-color-1" value="#EA4335" oninput="onColorChange(1,this.value)"/></div>
+            <input type="text" id="brand-hex-1" class="text-input" value="#EA4335" style="margin-bottom:0;" placeholder="Primary" oninput="onHexInput(1,this.value)"/>
+          </div>
+          <div class="color-row" style="flex:1;min-width:140px;">
+            <div class="color-swatch" id="color-swatch-2"><input type="color" id="brand-color-2" value="#EA4335" oninput="onColorChange(2,this.value)"/></div>
+            <input type="text" id="brand-hex-2" class="text-input" value="" style="margin-bottom:0;" placeholder="Secondary (optional)" oninput="onHexInput(2,this.value)"/>
+          </div>
+          <div class="color-row" style="flex:1;min-width:140px;">
+            <div class="color-swatch" id="color-swatch-3"><input type="color" id="brand-color-3" value="#EA4335" oninput="onColorChange(3,this.value)"/></div>
+            <input type="text" id="brand-hex-3" class="text-input" value="" style="margin-bottom:0;" placeholder="Tertiary (optional)" oninput="onHexInput(3,this.value)"/>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#9aa0a6;margin-top:6px;line-height:1.5;">Primary = fills &amp; buttons · Secondary = pin borders &amp; sidebar outline · Tertiary = category chips &amp; tags. Leave blank to inherit from primary.</div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Company logo (PNG, SVG, JPG)</label>
+        <div class="drop-zone" id="logo-zone">
+          <input type="file" id="logo-input" accept="image/*" onchange="onLogoSelected(this)"/>
+          <div class="drop-text"><strong>Browse</strong> or drop logo here<br/><span style="color:#9aa0a6;">Square or wide formats both work</span></div>
+        </div>
+        <div class="logo-preview-wrap" id="logo-preview-wrap" style="display:none;">
+          <img id="logo-thumb" class="logo-thumb" alt="Logo preview"/>
+          <span style="font-size:12px;color:#34A853;font-weight:500;" id="logo-filename"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">CSR / MVO / Sustainability report</div>
+      <div class="card-sub">Upload the company's own report. The tool reads up to 50 pages and extracts relevant environmental data to generate the pins.</div>
+      <div class="drop-zone" id="pdf-zone">
+        <input type="file" id="pdf-input" accept=".pdf" onchange="onPDFSelected(this)"/>
+        <div class="drop-text"><strong>Browse</strong> or drop PDF here<br/><span style="color:#9aa0a6;">Max 50 pages extracted · File stays in your browser</span></div>
+      </div>
+      <div id="pdf-chosen" class="file-chosen" style="display:none;margin-top:6px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Anthropic API key</div>
+      <div class="card-sub">Used only in your browser. Sent directly to api.anthropic.com — never stored or proxied.</div>
+      <div id="api-key-section">
+        <input type="password" id="api-key" class="text-input" placeholder="sk-ant-..." oninput="validateForm()"/>
+        <div class="key-note">Need a key? <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>
+      </div>
+    </div>
+
+    <button class="generate-btn" id="generate-btn" onclick="startGenerate()" disabled>Generate branded preview</button>
+    <div class="error-box" id="error-box"></div>
+  </div><!-- /form-section -->
+
+  <!-- Progress section -->
+  <div id="progress-section">
+    <div class="progress-card">
+      <div class="progress-icon">
+        <svg width="40" height="40" viewBox="0 0 28 28" fill="none"><path d="M14 2C8.477 2 4 6.477 4 12c0 7.5 10 16 10 16s10-8.5 10-16c0-5.523-4.477-10-10-10z" fill="#EA4335"/><circle cx="14" cy="12" r="4.5" fill="white"/></svg>
+      </div>
+      <div class="progress-title">Generating preview</div>
+      <div class="progress-sub" id="progress-sub">Reading PDF…</div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+      <div class="progress-step" id="progress-step"></div>
+    </div>
+  </div>
+
+  <!-- Result section -->
+  <div id="result-section">
+    <div class="result-card">
+      <div class="result-header">
+        <div class="result-company-row">
+          <img id="result-logo" class="result-logo" alt="" style="display:none;"/>
+          <div class="result-company-name" id="result-company-name"></div>
+        </div>
+        <div class="result-tagline" id="result-tagline"></div>
+        <div class="result-actions">
+          <button class="action-btn primary" onclick="downloadResult()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Download index.html
+          </button>
+          <button class="action-btn secondary" onclick="resetForm()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            New company
+          </button>
+        </div>
+      </div>
+      <ul class="pin-list" id="result-pin-list"></ul>
+    </div>
+
+    <div class="gh-section">
+      <div class="gh-title">Push directly to GitHub Pages</div>
+      <div class="gh-sub">Add a GitHub personal access token with <code>contents: write</code> scope and the file will be pushed to <code>preview/[slug]/index.html</code> in your repo and go live immediately.</div>
+      <div class="field-row" style="margin-bottom:8px;">
+        <div class="field">
+          <label class="field-label">GitHub token</label>
+          <input type="password" id="gh-token" class="text-input" placeholder="ghp_..." style="margin-bottom:0;"/>
+        </div>
+        <div class="field" style="max-width:220px;">
+          <label class="field-label">Repo (owner/name)</label>
+          <input type="text" id="gh-repo" class="text-input" placeholder="Martijn-nowhere/nowhere-maps" style="margin-bottom:0;"/>
+        </div>
+      </div>
+      <button class="action-btn github" onclick="pushToGitHub()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+        Push to GitHub Pages
+      </button>
+      <div class="error-box" id="gh-error-box"></div>
+      <div id="gh-success" style="display:none;margin-top:10px;font-size:12px;color:#137333;line-height:1.6;"></div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+/* ─── CONFIG ────────────────────────────────────────────────
+   Pre-fill to hide input from users.
+──────────────────────────────────────────────────────────── */
+const CONFIG = { ANTHROPIC_API_KEY: '' };
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+/* ─── state ─────────────────────────────────────────────── */
+let pdfFile = null, logoFile = null, logoDataURL = '';
+let generatedHTML = '', generatedSlug = '';
+
+/* ─── init ──────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  loadSavedKeys();
+  onColorChange(1, '#EA4335');
+  setupDrop('logo-zone', 'logo-input', onLogoDropped);
+  setupDrop('pdf-zone', 'pdf-input', onPDFDropped);
+  document.getElementById('company-name').addEventListener('input', e => {
+    const slug = e.target.value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    document.getElementById('company-slug').value = slug;
+    validateForm();
+  });
+  document.getElementById('company-slug').addEventListener('input', validateForm);
+});
+
+function loadSavedKeys() {
+  /* Load API key */
+  const savedKey = localStorage.getItem('nm_anthropic_key');
+  if (CONFIG.ANTHROPIC_API_KEY || savedKey) {
+    const key = CONFIG.ANTHROPIC_API_KEY || savedKey;
+    const section = document.getElementById('api-key-section');
+    /* Replace input with a "saved" indicator, keep key accessible */
+    section.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#e6f4ea;border-radius:8px;font-size:12px;color:#137333;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="#137333"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      API key saved in browser
+      <button onclick="clearSavedKey()" style="margin-left:auto;font-size:11px;color:#70757a;background:none;border:none;cursor:pointer;text-decoration:underline;">Clear</button>
+    </div>
+    <input type="hidden" id="api-key" value="${key}"/>`;
+  }
+
+  /* Load GitHub token */
+  const savedToken = localStorage.getItem('nm_github_token');
+  if (savedToken) {
+    const el = document.getElementById('gh-token');
+    if (el) el.value = savedToken;
+  }
+}
+
+function clearSavedKey() {
+  localStorage.removeItem('nm_anthropic_key');
+  const section = document.getElementById('api-key-section');
+  section.innerHTML = `<input type="password" id="api-key" class="text-input" placeholder="sk-ant-..." oninput="validateForm()"/>
+    <div class="key-note">Need a key? <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>`;
+  validateForm();
+}
+
+function saveKeys(apiKey, ghToken) {
+  if (apiKey && !CONFIG.ANTHROPIC_API_KEY) localStorage.setItem('nm_anthropic_key', apiKey);
+  if (ghToken) localStorage.setItem('nm_github_token', ghToken);
+}
+
+function setupDrop(zoneId, inputId, handler) {
+  const zone = document.getElementById(zoneId);
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0]; if (f) handler(f);
+  });
+}
+
+function onColorChange(n, v) {
+  document.getElementById('color-swatch-' + n).style.background = v;
+  document.getElementById('brand-color-' + n).value = v;
+  document.getElementById('brand-hex-' + n).value = v;
+}
+function onHexInput(n, v) {
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+    document.getElementById('brand-color-' + n).value = v;
+    document.getElementById('color-swatch-' + n).style.background = v;
+  }
+}
+function getColor(n) {
+  const v = document.getElementById('brand-hex-' + n).value.trim();
+  return /^#[0-9a-fA-F]{6}$/.test(v) ? v : null;
+}
+
+function onLogoSelected(input) { if (input.files[0]) onLogoDropped(input.files[0]); }
+function onPDFSelected(input) { if (input.files[0]) onPDFDropped(input.files[0]); }
+
+function onLogoDropped(f) {
+  logoFile = f;
+  const reader = new FileReader();
+  reader.onload = e => {
+    logoDataURL = e.target.result;
+    document.getElementById('logo-thumb').src = logoDataURL;
+    document.getElementById('logo-filename').textContent = '✓ ' + f.name;
+    document.getElementById('logo-preview-wrap').style.display = 'flex';
+    document.querySelector('#logo-zone .drop-text').style.display = 'none';
+  };
+  reader.readAsDataURL(f);
+  validateForm();
+}
+
+function onPDFDropped(f) {
+  pdfFile = f;
+  const el = document.getElementById('pdf-chosen');
+  el.textContent = '✓ ' + f.name;
+  el.style.display = 'block';
+  document.querySelector('#pdf-zone .drop-text').style.display = 'none';
+  validateForm();
+}
+
+function validateForm() {
+  const name = document.getElementById('company-name').value.trim();
+  const slug = document.getElementById('company-slug').value.trim();
+  const key = CONFIG.ANTHROPIC_API_KEY || document.getElementById('api-key').value.trim();
+  document.getElementById('generate-btn').disabled =
+    !(name && slug && logoFile && pdfFile && key);
+}
+
+/* ─── PDF extraction ────────────────────────────────────── */
+async function extractPDFText(file) {
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const pages = Math.min(pdf.numPages, 50);
+  let text = '';
+  for (let i = 1; i <= pages; i++) {
+    const pg = await pdf.getPage(i);
+    const ct = await pg.getTextContent();
+    text += ct.items.map(it => it.str).join(' ') + '\n';
+    if (text.length > 40000) break;
+  }
+  return text.slice(0, 40000);
+}
+
+/* ─── main flow ─────────────────────────────────────────── */
+async function startGenerate() {
+  hideError('error-box');
+  const company  = document.getElementById('company-name').value.trim();
+  const slug     = document.getElementById('company-slug').value.trim();
+  const color1   = getColor(1) || '#EA4335';
+  const color2   = getColor(2) || color1;
+  const color3   = getColor(3) || color1;
+  const apiKey   = CONFIG.ANTHROPIC_API_KEY || document.getElementById('api-key').value.trim();
+  saveKeys(apiKey, document.getElementById('gh-token')?.value.trim());
+
+  showSection('progress');
+  setProgress(8, 'Reading PDF…', 'Extracting text from report');
+
+  let pdfText = '';
+  try { pdfText = await extractPDFText(pdfFile); }
+  catch(e) { showSection('form'); showError('error-box', 'Could not read PDF: ' + e.message); return; }
+
+  setProgress(35, 'Sending to Claude…', 'Analysing report and generating pins');
+
+  let raw;
+  try { raw = await callClaude(apiKey, buildPrompt(company, color1, pdfText)); }
+  catch(e) { showSection('form'); showError('error-box', 'API error: ' + e.message); return; }
+
+  setProgress(80, 'Building branded page…', 'Assembling HTML output');
+
+  let parsed;
+  try { parsed = parseClaudeResponse(raw); }
+  catch(e) { showSection('form'); showError('error-box', 'Parse error: ' + e.message + '\n\n' + raw.slice(0, 300)); return; }
+
+  generatedSlug = slug;
+  generatedHTML = buildOutputHTML({ company, slug,
+    color1, color2, color3, logo: logoDataURL,
+    tagline: parsed.tagline, customCategory: parsed.customCategory,
+    hqLat: parsed.hqLat, hqLng: parsed.hqLng, pins: parsed.pins });
+
+  setProgress(100, 'Done.', '');
+  renderResult(company, parsed);
+  showSection('result');
+}
+
+/* ─── Claude prompt ─────────────────────────────────────── */
+function buildPrompt(company, color1, pdfText) {
+  return `You are generating content for NoWhere Maps — a satirical Google Maps-style project that pins real environmental impacts to geographic locations, written as deadpan 1-star review copy.
+
+LANGUAGE: Detect the language of the report and write ALL output — pin names, addresses, reviewShort, reviewFull, sig, pinNote, tagline, customCategory, respondsNote — in that same language. If the report is in Dutch, write in Dutch. If in German, write in German. If in English, write in English. Match the language exactly, including the signature format (e.g. "— Geplaatst vanuit: [locatie]" for Dutch).
+
+TONE RULES (strict):
+- Deadpan. No activism energy. No moralising. Trust the audience.
+- Written as a genuine Google Maps review left by someone who happened to be there.
+- Funny and factually credible at the same time.
+- The humour comes from the gap between the mundane review format and the gravity of the subject.
+- Signature format: "— Posted from: [absurd but fitting location]"
+
+PIN SCHEMA (JSON):
+{
+  "name": "Short name of the location or phenomenon",
+  "type": "Brief descriptor · Geographic scope",
+  "address": "No fixed address · [context] · [qualifier]",
+  "stars": 1,
+  "category": "Ocean & water" | "Atmosphere" | "Soil & land" | "Corporate" | "Policy & greenwashing" | "[customCategory]",
+  "wasteType": "Plastic" | "Organic" | "Textile" | "E-waste" | "Mixed",
+  "reviewShort": "One punchy sentence. 10–20 words. The hook.",
+  "reviewFull": "2–4 sentences in review style. Real facts and figures. Dry kicker at the end.",
+  "sig": "— Posted from: [absurd location]",
+  "pinNote": "Factual footnote explaining why this specific location was chosen. Reads like a serious endnote.",
+  "lat": 0.0,
+  "lng": 0.0,
+  "tags": ["tag1","tag2","tag3"],
+  "companyResponds": true or false,
+  "respondsNote": "If companyResponds is true: one sentence describing what the company says it is doing about this specific issue. Verbatim from the report if possible. Deadpan."
+}
+
+TONE EXAMPLES:
+reviewShort: "421ppm and climbing. Invisible, odourless, planet-wide."
+reviewShort: "Intimate venue. Did not book. Already checked in."
+sig: "— Posted from: an accounting document"
+sig: "— Posted from: the bottom of a plastic container"
+kicker example: "Two stars because the water pressure was fine."
+
+COMPANY: ${company}
+
+REPORT TEXT:
+${pdfText}
+
+---
+
+TASK: Analyse this report. Generate exactly 10 pins tied to real geographic locations related to this company's supply chain, production, packaging, raw materials, logistics, or direct environmental impact. Base pins on specific facts from the report or well-documented facts about this company's industry.
+
+Rules:
+- At least 3 different categories (use the custom category for industry-specific pins)
+- At least 2 different wasteTypes
+- stars: almost always 1, occasionally 2, never more unless genuinely surprising
+- companyResponds: true only when the report explicitly addresses that specific issue with a named action, target, or programme
+- Coordinates must be real, precise, and meaningful — pin to the actual relevant factory, port, river, region
+
+RETURN a single JSON object with exactly these fields — no markdown, no preamble:
+{
+  "tagline": "One dry, deadpan line that captures this company's environmental situation. Max 12 words. No exclamation marks.",
+  "customCategory": "Short industry-specific category name (e.g. 'Dairy & livestock' or 'Fast food' or 'Packaging')",
+  "hqLat": 0.0,
+  "hqLng": 0.0,
+  "pins": [ ...10 pin objects... ]
+}`;
+}
+
+async function callClaude(apiKey, prompt) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-8',
+      max_tokens: 10000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error(e.error?.message || r.statusText);
+  }
+  const d = await r.json();
+  return d.content[0].text;
+}
+
+function parseClaudeResponse(text) {
+  const clean = text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
+  const obj = JSON.parse(clean);
+  if (!obj.pins || !Array.isArray(obj.pins)) throw new Error('Missing pins array');
+  obj.pins = obj.pins.map(p => ({
+    name: p.name || 'Unknown',
+    type: p.type || '',
+    address: p.address || 'No fixed address',
+    stars: Math.min(5, Math.max(1, parseInt(p.stars) || 1)),
+    category: p.category || 'Corporate',
+    wasteType: p.wasteType || 'Mixed',
+    reviewShort: p.reviewShort || '',
+    reviewFull: p.reviewFull || '',
+    sig: p.sig || '— Posted from: somewhere',
+    pinNote: p.pinNote || '',
+    lat: parseFloat(p.lat) || 0,
+    lng: parseFloat(p.lng) || 0,
+    tags: Array.isArray(p.tags) ? p.tags : [],
+    companyResponds: !!p.companyResponds,
+    respondsNote: p.respondsNote || ''
+  }));
+  return obj;
+}
+
+/* ─── render result summary ─────────────────────────────── */
+function renderResult(company, parsed) {
+  document.getElementById('result-company-name').textContent = company + ' — NoWhere Maps edition';
+  document.getElementById('result-tagline').textContent = '"' + parsed.tagline + '"';
+  if (logoDataURL) {
+    const img = document.getElementById('result-logo');
+    img.src = logoDataURL; img.style.display = 'block';
+  }
+  const list = document.getElementById('result-pin-list');
+  list.innerHTML = parsed.pins.map(p => `
+    <li class="pin-row">
+      <div class="pin-dot ${p.companyResponds ? 'has-fix' : ''}"></div>
+      <div class="pin-info">
+        <div class="pin-name">${p.name}${p.companyResponds ? '<span class="pin-badge">Company responds</span>' : ''}</div>
+        <div class="pin-short">${p.reviewShort}</div>
+      </div>
+    </li>`).join('');
+}
+
+/* ─── download ──────────────────────────────────────────── */
+function downloadResult() {
+  const blob = new Blob([generatedHTML], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'index.html';
+  a.click();
+}
+
+/* ─── GitHub push ───────────────────────────────────────── */
+async function pushToGitHub() {
+  const token = document.getElementById('gh-token').value.trim();
+  saveKeys(null, token);
+  const repo  = document.getElementById('gh-repo').value.trim();
+  hideError('gh-error-box');
+  document.getElementById('gh-success').style.display = 'none';
+  if (!token || !repo) { showError('gh-error-box', 'Enter a GitHub token and repo.'); return; }
+
+  const path = `preview/${generatedSlug}/index.html`;
+  const content = btoa(unescape(encodeURIComponent(generatedHTML)));
+  const [owner, repoName] = repo.split('/');
+
+  // Check if file exists (to get SHA for update)
+  let sha;
+  try {
+    const check = await fetch(`https://api.github.com/repos/${owner}/${repoName}/contents/${path}`, {
+      headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    if (check.ok) { const d = await check.json(); sha = d.sha; }
+  } catch(e) {}
+
+  const body = { message: `Add ${generatedSlug} NoWhere Maps preview`, content };
+  if (sha) body.sha = sha;
+
+  const r = await fetch(`https://api.github.com/repos/${owner}/${repoName}/contents/${path}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    showError('gh-error-box', e.message || 'GitHub API error');
+    return;
+  }
+
+  const liveURL = `https://${owner.toLowerCase().replace('martijn-nowhere', 'nowheremaps')}.github.io/nowhere-maps/preview/${generatedSlug}/`;
+  document.getElementById('gh-success').innerHTML =
+    `✓ Pushed to <code>${path}</code>. GitHub Pages will publish shortly.<br/>` +
+    `Shareable URL: <a href="${liveURL}" target="_blank">${liveURL}</a>`;
+  document.getElementById('gh-success').style.display = 'block';
+}
+
+/* ─── UI helpers ────────────────────────────────────────── */
+function showSection(name) {
+  document.getElementById('form-section').style.display     = name==='form'     ? 'block':'none';
+  document.getElementById('progress-section').style.display = name==='progress' ? 'block':'none';
+  document.getElementById('result-section').style.display   = name==='result'   ? 'block':'none';
+}
+function setProgress(pct, msg, step) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-sub').textContent = msg;
+  document.getElementById('progress-step').textContent = step;
+}
+function showError(id, msg) {
+  const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block';
+}
+function hideError(id) { document.getElementById(id).style.display = 'none'; }
+function resetForm() {
+  pdfFile = null; logoFile = null; logoDataURL = ''; generatedHTML = ''; generatedSlug = '';
+  showSection('form');
+}
+
+/* ══════════════════════════════════════════════════════════
+   OUTPUT HTML GENERATOR
+   Produces a fully self-contained branded preview page.
+══════════════════════════════════════════════════════════ */
+function buildOutputHTML(cfg) {
+  /* cfg: { company, slug, color1, color2, color3, logo, tagline, customCategory, hqLat, hqLng, pins[] }
+     color1 = primary   → fills, buttons, cluster icons, modal CTA, toggle-on, active state
+     color2 = secondary → pin marker border, sidebar outline, topbar accent
+     color3 = tertiary  → category chips bg tint, tags, chip text
+  */
+  const c    = JSON.stringify(cfg.company);
+  const logo = JSON.stringify(cfg.logo);
+  const tl   = JSON.stringify(cfg.tagline);
+  const cat  = JSON.stringify(cfg.customCategory);
+  const hq   = JSON.stringify([cfg.hqLat, cfg.hqLng]);
+  const pins = JSON.stringify(cfg.pins);
+  const slug = cfg.slug;
+
+  /* Tint from tertiary colour for chip backgrounds */
+  const hex3 = cfg.color3.replace('#','');
+  const r3 = parseInt(hex3.slice(0,2),16), g3 = parseInt(hex3.slice(2,4),16), b3 = parseInt(hex3.slice(4,6),16);
+  const tint = `rgba(${r3},${g3},${b3},0.13)`;
+  const tintJSON = JSON.stringify(tint);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NoWhere Maps — ${cfg.company} edition</title>
+<meta name="description" content="${cfg.tagline} — A NoWhere Maps preview for ${cfg.company}."/>
+<meta property="og:title" content="NoWhere Maps × ${cfg.company}"/>
+<meta property="og:description" content="${cfg.tagline}"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --brand:${cfg.color1};
+  --brand2:${cfg.color2};
+  --brand3:${cfg.color3};
+  --tint:${tint};
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:'Roboto',Arial,sans-serif;font-size:14px;color:#3c4043;background:#fff;}
+#app{display:flex;flex-direction:column;height:100vh;}
+
+/* topbar */
+#topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:#fff;border-bottom:1px solid #e0e0e0;box-shadow:0 1px 3px rgba(0,0,0,0.08);z-index:1000;flex-shrink:0;border-top:3px solid var(--brand2);}
+.logo-wrap{display:flex;align-items:center;gap:8px;flex-shrink:0;text-decoration:none;}
+.logo-text{font-family:'Google Sans',sans-serif;font-size:18px;letter-spacing:-0.5px;}
+.logo-text .n{color:#4285F4}.logo-text .o1{color:#EA4335}.logo-text .w{color:#FBBC04}.logo-text .h{color:#4285F4}.logo-text .e{color:#34A853}.logo-text .r{color:#EA4335}.logo-text .e2{color:#4285F4}
+.tb-divider{width:1px;height:22px;background:#e0e0e0;flex-shrink:0;}
+.company-header{display:flex;align-items:center;gap:8px;}
+.company-logo{height:28px;max-width:80px;object-fit:contain;}
+.edition-text{font-size:12px;color:#5f6368;white-space:nowrap;}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.sor-badge{display:flex;align-items:center;gap:5px;font-size:11px;color:#5f6368;white-space:nowrap;}
+.sor-dot{width:7px;height:7px;border-radius:50%;background:#0db762;}
+.sor-badge a{color:#0db762;text-decoration:none;font-weight:500;}
+
+/* toggle */
+.toggle-wrap{display:flex;align-items:center;gap:6px;font-size:11px;color:#5f6368;cursor:pointer;user-select:none;}
+.toggle{width:32px;height:18px;border-radius:9px;background:#dadce0;position:relative;transition:background 0.2s;flex-shrink:0;}
+.toggle.on{background:var(--brand);}
+.toggle-knob{width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);}
+.toggle.on .toggle-knob{left:16px;}
+
+/* layout */
+#content{display:flex;flex:1;overflow:hidden;outline:3px solid var(--brand2);}
+#sidebar{width:380px;flex-shrink:0;display:flex;flex-direction:column;background:#fff;overflow:hidden;box-shadow:2px 0 4px rgba(0,0,0,0.06);z-index:10;}
+#sidebar-header{padding:14px 16px 10px;border-bottom:1px solid #e8eaed;flex-shrink:0;}
+.sh-company{font-family:'Google Sans',sans-serif;font-size:15px;color:#202124;margin-bottom:2px;}
+.sh-tagline{font-size:11px;color:#70757a;font-style:italic;line-height:1.5;}
+.sh-count{font-size:11px;color:#9aa0a6;margin-top:4px;}
+.sh-toggle-row{margin-top:10px;}
+
+/* list */
+#list-panel{overflow-y:auto;flex:1;}
+.place-item{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid #f1f3f4;cursor:pointer;transition:background 0.1s;}
+.place-item:hover{background:#f8f9fa;}
+.place-item.active{background:var(--tint);}
+.place-item.hidden{display:none;}
+.place-icon-wrap{flex-shrink:0;margin-top:2px;}
+.place-info{flex:1;min-width:0;}
+.place-info h3{font-size:14px;font-weight:500;color:#202124;line-height:1.3;margin-bottom:2px;}
+.place-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;}
+.stars{color:#EA4335;font-size:12px;letter-spacing:1px;}
+.star-num{font-size:12px;color:#70757a;}
+.responds-badge{font-size:10px;padding:2px 6px;border-radius:10px;background:#e6f4ea;color:#137333;font-weight:500;}
+.responds-badge.hidden{display:none;}
+.place-address{font-size:12px;color:#70757a;font-style:italic;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.place-snippet{font-size:12px;color:#3c4043;line-height:1.5;}
+.place-chips{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;}
+.chip{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;}
+.chip.cat{background:var(--tint);color:var(--brand3);}
+.chip.waste{background:#e6f4ea;color:#137333;}
+
+/* detail */
+#detail-panel{display:none;flex-direction:column;flex:1;overflow:hidden;}
+#detail-panel.visible{display:flex;}
+#detail-header{padding:12px 16px 0;flex-shrink:0;}
+.back-btn{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--brand1,var(--brand));cursor:pointer;border:none;background:none;padding:0;font-family:'Roboto',sans-serif;}
+.back-btn:hover{text-decoration:underline;}
+#detail-scroll{overflow-y:auto;flex:1;padding:0 16px 24px;}
+.detail-name{font-family:'Google Sans',sans-serif;font-size:22px;font-weight:400;color:#202124;line-height:1.3;margin-bottom:4px;}
+.detail-type{font-size:13px;color:#70757a;margin-bottom:8px;font-style:italic;}
+.detail-stars-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.detail-stars-big{color:#EA4335;font-size:18px;letter-spacing:2px;}
+.detail-star-num-big{font-size:18px;font-weight:500;color:#202124;}
+.detail-rv-count{font-size:13px;color:#70757a;}
+.action-row{display:flex;gap:8px;margin-bottom:14px;}
+.act-btn{display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--tint);border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-family:'Roboto',sans-serif;font-size:11px;color:var(--brand3);font-weight:500;min-width:64px;transition:opacity 0.12s;}
+.act-btn:hover{opacity:0.8;}
+.detail-divider{height:1px;background:#e8eaed;margin:10px 0;}
+.detail-section-label{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:#70757a;margin-bottom:6px;font-weight:500;}
+.detail-review-box{background:#f8f9fa;border-radius:8px;padding:12px 14px;margin-bottom:12px;}
+.review-text{font-size:13px;line-height:1.7;color:#3c4043;}
+.review-sig{font-size:11px;color:#9aa0a6;margin-top:6px;font-style:italic;}
+.responds-box{display:flex;gap:10px;align-items:flex-start;background:#e6f4ea;border-radius:8px;padding:10px 12px;margin-bottom:12px;}
+.responds-box.hidden{display:none;}
+.pin-note-box{display:flex;gap:10px;align-items:flex-start;background:#fef7e0;border-radius:8px;padding:10px 12px;margin-bottom:12px;}
+.pin-note-text{font-size:12px;line-height:1.6;color:#5f4200;}
+.responds-text{font-size:12px;line-height:1.6;color:#0d652d;}
+.tags-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+.tag{font-size:11px;padding:3px 10px;border-radius:16px;border:1px solid #dadce0;color:#5f6368;background:#fff;}
+.cta-footer{margin-top:16px;padding:14px;background:#f1f8f4;border-radius:8px;border-left:3px solid #0db762;}
+.cta-footer p{font-size:12px;line-height:1.6;color:#3c4043;margin-bottom:8px;}
+.cta-footer a{color:#0db762;text-decoration:none;font-weight:500;}
+.cta-footer a:hover{text-decoration:underline;}
+
+#map{flex:1;}
+
+/* map marker / cluster */
+.logo-marker-wrap{border-radius:50%;border:3px solid var(--brand);background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.logo-marker-wrap.active{border-width:4px;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
+.logo-marker-img{width:100%;height:100%;object-fit:contain;padding:3px;}
+.nm-popup{font-family:'Roboto',Arial,sans-serif;min-width:200px;}
+.nm-popup-title{font-family:'Google Sans',sans-serif;font-size:14px;font-weight:500;color:#202124;margin-bottom:2px;line-height:1.3;}
+.nm-popup-address{font-size:11px;color:#70757a;font-style:italic;margin-bottom:4px;}
+.nm-popup-stars{font-size:13px;color:#EA4335;margin-bottom:3px;}
+.nm-popup-tagline{font-size:11px;color:#9aa0a6;font-style:italic;}
+
+/* modal */
+#intro-modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;}
+#intro-modal.gone{display:none;}
+.modal-box{background:#fff;border-radius:16px;max-width:480px;width:100%;padding:28px;box-shadow:0 8px 32px rgba(0,0,0,0.2);}
+.modal-logo-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.modal-logo{height:36px;max-width:100px;object-fit:contain;}
+.modal-x{font-family:'Google Sans',sans-serif;font-size:22px;color:#dadce0;margin:0 4px;}
+.modal-nm-logo{font-family:'Google Sans',sans-serif;font-size:18px;letter-spacing:-0.5px;}
+.modal-title{font-family:'Google Sans',sans-serif;font-size:18px;color:#202124;margin-bottom:8px;line-height:1.3;}
+.modal-tagline{font-size:14px;color:#EA4335;font-style:italic;margin-bottom:14px;}
+.modal-body{font-size:13px;color:#5f6368;line-height:1.7;margin-bottom:20px;}
+.modal-close{width:100%;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:'Google Sans',sans-serif;cursor:pointer;letter-spacing:0.2px;transition:opacity 0.15s;}
+.modal-close:hover{opacity:0.88;}
+
+/* scrollbars */
+#list-panel::-webkit-scrollbar,#detail-scroll::-webkit-scrollbar{width:6px;}
+#list-panel::-webkit-scrollbar-track,#detail-scroll::-webkit-scrollbar-track{background:transparent;}
+#list-panel::-webkit-scrollbar-thumb,#detail-scroll::-webkit-scrollbar-thumb{background:#dadce0;border-radius:3px;}
+
+/* print / PDF export */
+@media print{
+  #intro-modal,#topbar,#map,#sidebar-header .sh-toggle-row,.action-row,.cta-footer{display:none!important;}
+  #app,#content{display:block!important;height:auto!important;overflow:visible!important;}
+  #sidebar{width:100%!important;box-shadow:none!important;overflow:visible!important;}
+  #list-panel,#detail-panel{display:block!important;overflow:visible!important;}
+  .place-item{page-break-inside:avoid;border:1px solid #e0e0e0;border-radius:8px;margin:8px 0;padding:14px;}
+  .place-item.hidden{display:none!important;}
+  #detail-panel.visible{display:none!important;}
+  .chip.cat{border:1px solid currentColor;}
+}
+
+@media(max-width:680px){
+  #sidebar{width:100%;position:absolute;bottom:0;left:0;right:0;z-index:20;height:52vh;box-shadow:0 -2px 8px rgba(0,0,0,0.1);}
+  #content{position:relative;}
+  #map{position:absolute;inset:0;}
+  .sor-badge span:not(.sor-dot){display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- intro modal -->
+<div id="intro-modal">
+  <div class="modal-box">
+    <div class="modal-logo-row">
+      <img class="modal-logo" src=${logo} alt="${cfg.company} logo"/>
+      <span class="modal-x">×</span>
+      <span class="modal-nm-logo" style="color:#EA4335;">NoWhere</span><span class="modal-nm-logo" style="color:#5f6368;font-size:14px;margin-left:2px;">Maps</span>
+    </div>
+    <div class="modal-title">A ${cfg.company} edition</div>
+    <div class="modal-tagline">"${cfg.tagline}"</div>
+    <div class="modal-body">
+      This preview was generated from ${cfg.company}'s own sustainability report using NoWhere Maps — a satirical project that pins real environmental phenomena to the map, written as deadpan Google Maps reviews.<br/><br/>
+      The pins below are based on facts in the report and documented industry context. Green markers indicate issues where the company has named an active response. Grey markers are the rest.
+    </div>
+    <button class="modal-close" onclick="closeModal()">Show me the map</button>
+  </div>
+</div>
+
+<div id="app">
+  <div id="topbar">
+    <a class="logo-wrap" href="../../">
+      <svg width="22" height="22" viewBox="0 0 28 28" fill="none"><path d="M14 2C8.477 2 4 6.477 4 12c0 7.5 10 16 10 16s10-8.5 10-16c0-5.523-4.477-10-10-10z" fill="#EA4335"/><circle cx="14" cy="12" r="4.5" fill="white"/></svg>
+      <div class="logo-text"><span class="n">N</span><span class="o1">o</span><span class="w">W</span><span class="h">h</span><span class="e">e</span><span class="r">r</span><span class="e2">e</span><span style="color:#5f6368;font-size:14px;margin-left:2px;">Maps</span></div>
+    </a>
+    <div class="tb-divider"></div>
+    <div class="company-header">
+      <img class="company-logo" src=${logo} alt="${cfg.company}"/>
+      <span class="edition-text">A <strong>${cfg.company}</strong> edition</span>
+    </div>
+    <div class="tb-right">
+      <div class="sor-badge">
+        <div class="sor-dot"></div>
+        <span>By </span><a href="https://www.schoolofrecycling.com" target="_blank">School of Recycling</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="content">
+    <div id="sidebar">
+      <div id="sidebar-header">
+        <div class="sh-company">${cfg.company} — NoWhere Maps</div>
+        <div class="sh-tagline">"${cfg.tagline}"</div>
+        <div class="sh-count" id="sh-count"></div>
+        <div class="sh-toggle-row">
+          <div class="toggle-wrap" onclick="toggleFix()">
+            <div class="toggle" id="fix-toggle"><div class="toggle-knob"></div></div>
+            <span id="toggle-label">Show: what they're fixing</span>
+          </div>
+        </div>
+      </div>
+      <div id="list-panel"></div>
+      <div id="detail-panel">
+        <div id="detail-header">
+          <button class="back-btn" onclick="showList()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            All locations
+          </button>
+        </div>
+        <div id="detail-scroll">
+          <div class="detail-name" id="d-name"></div>
+          <div class="detail-type" id="d-type"></div>
+          <div class="detail-stars-row">
+            <span class="detail-star-num-big" id="d-num"></span>
+            <span class="detail-stars-big" id="d-stars"></span>
+            <span class="detail-rv-count">1 review — the only one possible</span>
+          </div>
+          <div class="action-row">
+            <button class="act-btn" onclick="sharePinNative()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+              Share pin
+            </button>
+            <button class="act-btn" onclick="exportPDF()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              Download report
+            </button>
+          </div>
+          <div class="detail-divider"></div>
+          <div class="detail-section-label">Review</div>
+          <div class="detail-review-box">
+            <div class="review-text" id="d-review"></div>
+            <div class="review-sig" id="d-sig"></div>
+          </div>
+          <div class="responds-box" id="d-responds-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#34A853" style="flex-shrink:0;margin-top:1px"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            <div>
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:#137333;font-weight:500;margin-bottom:3px;">Company responds</div>
+              <div class="responds-text" id="d-responds-text"></div>
+            </div>
+          </div>
+          <div class="detail-section-label">Why this pin</div>
+          <div class="pin-note-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#F9AB00" style="flex-shrink:0;margin-top:1px"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            <div class="pin-note-text" id="d-pin-note"></div>
+          </div>
+          <div class="detail-section-label">Tags</div>
+          <div class="tags-wrap" id="d-tags"></div>
+          <div class="cta-footer">
+            <p>This is a <strong>NoWhere Maps</strong> preview — generated from ${cfg.company}'s own sustainability report. The full map covers 40+ global environmental phenomena.</p>
+            <a href="https://www.schoolofrecycling.com" target="_blank">School of Recycling →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="map"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"><\/script>
+<script>
+const COMPANY       = ${c};
+const LOGO          = ${logo};
+const BRAND         = ${JSON.stringify(cfg.color1)};
+const BRAND2        = ${JSON.stringify(cfg.color2)};
+const BRAND3        = ${JSON.stringify(cfg.color3)};
+const BRAND_TINT    = ${tintJSON};
+const TAGLINE       = ${tl};
+const CUSTOM_CAT    = ${cat};
+const HQ            = ${hq};
+const PINS          = ${pins};
+const SLUG          = ${JSON.stringify(slug)};
+
+let map, clusterGroup, markers = [], activeIdx = -1, fixingMode = false;
+
+function starStr(n){ return '★'.repeat(n)+'☆'.repeat(5-n); }
+
+function mkMarkerHTML(active) {
+  const sz = active ? 42 : 34;
+  return \`<div class="logo-marker-wrap \${active?'active':''}" style="width:\${sz}px;height:\${sz}px;border-color:\${BRAND2};">
+    <img class="logo-marker-img" src="\${LOGO}" alt="\${COMPANY}"/>
+  </div>\`;
+}
+
+function mkIcon(active) {
+  const sz = active ? 42 : 34;
+  return L.divIcon({ className:'', html: mkMarkerHTML(active),
+    iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], popupAnchor:[0,-sz/2-4] });
+}
+
+function mkRespondIcon(active) {
+  const sz = active ? 42 : 34;
+  return L.divIcon({ className:'', iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], popupAnchor:[0,-sz/2-4],
+    html:\`<div style="position:relative;width:\${sz}px;height:\${sz}px;">
+      <div class="logo-marker-wrap \${active?'active':''}" style="width:\${sz}px;height:\${sz}px;border-color:#34A853;">
+        <img class="logo-marker-img" src="\${LOGO}" alt="\${COMPANY}"/>
+      </div>
+      <div style="position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:#34A853;border:2px solid #fff;display:flex;align-items:center;justify-content:center;">
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="#fff"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      </div>
+    </div>\`
+  });
+}
+
+function getIcon(i, active) {
+  const p = PINS[i];
+  return (fixingMode && p.companyResponds) ? mkRespondIcon(active) : mkIcon(active);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initMap();
+  renderList();
+  document.getElementById('sh-count').textContent = PINS.length + ' locations';
+  /* fly to HQ region */
+  setTimeout(() => {
+    map.flyTo(HQ, 5, { duration: 2.5, easeLinearity: 0.3 });
+  }, 600);
+});
+
+function initMap() {
+  map = L.map('map', { zoomControl:true, scrollWheelZoom:true }).setView([20, 10], 2);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 18
+  }).addTo(map);
+
+  clusterGroup = L.markerClusterGroup({
+    maxClusterRadius: 60, spiderfyOnMaxZoom: true, showCoverageOnHover: false,
+    iconCreateFunction: cluster => {
+      const count = cluster.getChildCount();
+      const sz = count > 9 ? 46 : 38;
+      return L.divIcon({ className:'', iconSize:[sz,sz],
+        html:\`<div style="width:\${sz}px;height:\${sz}px;border-radius:50%;border:3px solid \${BRAND2};background:\${BRAND};display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;color:#fff;">\${count}</div>\`
+      });
+    }
+  });
+
+  PINS.forEach((p, i) => {
+    const m = L.marker([p.lat, p.lng], { icon: getIcon(i, false) })
+      .bindPopup(\`<div class="nm-popup">
+        <div class="nm-popup-title">\${p.name}</div>
+        <div class="nm-popup-address">\${p.address}</div>
+        <div class="nm-popup-stars">\${starStr(p.stars)} \${p.stars}.0</div>
+        <div class="nm-popup-tagline">"Could not find this on Google Maps. It found me."</div>
+      </div>\`, { maxWidth: 260 });
+    m.on('click', () => showDetail(i));
+    markers.push(m);
+    clusterGroup.addLayer(m);
+  });
+  map.addLayer(clusterGroup);
+}
+
+function renderList() {
+  const panel = document.getElementById('list-panel');
+  panel.innerHTML = PINS.map((p, i) => \`
+    <div class="place-item" id="item-\${i}" onclick="showDetail(\${i})">
+      <div class="place-icon-wrap">
+        \${(fixingMode && p.companyResponds)
+          ? \`<div style="width:36px;height:36px;border-radius:50%;border:2.5px solid #34A853;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+               <img src="\${LOGO}" style="width:100%;height:100%;object-fit:contain;padding:3px;"/>
+             </div>\`
+          : \`<div style="width:36px;height:36px;border-radius:50%;border:2.5px solid \${BRAND2};background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+               <img src="\${LOGO}" style="width:100%;height:100%;object-fit:contain;padding:3px;"/>
+             </div>\`
+        }
+      </div>
+      <div class="place-info">
+        <h3>\${p.name}</h3>
+        <div class="place-meta">
+          <span class="stars">\${starStr(p.stars)}</span>
+          <span class="star-num">\${p.stars}.0</span>
+          \${(fixingMode && p.companyResponds) ? '<span class="responds-badge">✓ Responding</span>' : ''}
+        </div>
+        <div class="place-address">\${p.address}</div>
+        <div class="place-snippet">\${fixingMode && p.companyResponds && p.respondsNote ? p.respondsNote : p.reviewShort}</div>
+        <div class="place-chips"><span class="chip cat">\${p.category}</span><span class="chip waste">\${p.wasteType}</span></div>
+      </div>
+    </div>\`).join('');
+}
+
+function showDetail(i) {
+  const p = PINS[i];
+  if (activeIdx >= 0 && markers[activeIdx]) markers[activeIdx].setIcon(getIcon(activeIdx, false));
+  activeIdx = i;
+  markers[i].setIcon(getIcon(i, true));
+
+  document.getElementById('list-panel').style.display = 'none';
+  document.getElementById('detail-panel').classList.add('visible');
+
+  document.getElementById('d-name').textContent = p.name;
+  document.getElementById('d-type').textContent = p.type;
+  document.getElementById('d-num').textContent = p.stars + '.0';
+  document.getElementById('d-stars').textContent = starStr(p.stars);
+  document.getElementById('d-review').textContent = p.reviewFull;
+  document.getElementById('d-sig').textContent = p.sig;
+  document.getElementById('d-pin-note').textContent = p.pinNote;
+  document.getElementById('d-tags').innerHTML = p.tags.map(t => \`<span class="tag">\${t}</span>\`).join('');
+
+  const rb = document.getElementById('d-responds-box');
+  if (p.companyResponds && p.respondsNote) {
+    document.getElementById('d-responds-text').textContent = p.respondsNote;
+    rb.classList.remove('hidden');
+  } else {
+    rb.classList.add('hidden');
+  }
+
+  document.querySelectorAll('.place-item').forEach((el, idx) => el.classList.toggle('active', idx === i));
+  map.flyTo([p.lat, p.lng], 6, { duration: 1.4, easeLinearity: 0.4 });
+  setTimeout(() => { if (markers[i]) markers[i].openPopup(); }, 1500);
+}
+
+function showList() {
+  if (activeIdx >= 0 && markers[activeIdx]) markers[activeIdx].setIcon(getIcon(activeIdx, false));
+  activeIdx = -1;
+  document.getElementById('list-panel').style.display = 'block';
+  document.getElementById('detail-panel').classList.remove('visible');
+  markers.forEach(m => m.closePopup());
+  map.flyTo(HQ, 5, { duration: 1.2 });
+}
+
+function toggleFix() {
+  fixingMode = !fixingMode;
+  const t = document.getElementById('fix-toggle');
+  t.classList.toggle('on', fixingMode);
+  document.getElementById('toggle-label').textContent =
+    fixingMode ? 'Showing: what they\'re fixing' : 'Show: what they\'re fixing';
+  renderList();
+  markers.forEach((m, i) => m.setIcon(getIcon(i, i === activeIdx)));
+}
+
+function closeModal() {
+  document.getElementById('intro-modal').classList.add('gone');
+}
+
+function sharePinNative() {
+  if (activeIdx < 0) return;
+  const p = PINS[activeIdx];
+  const text = \`\${COMPANY} · \${p.name}: \${p.reviewShort} — Could not find this on Google Maps. It found me. \${window.location.href}\`;
+  if (navigator.share) {
+    navigator.share({ title: COMPANY + ' · NoWhere Maps', text, url: window.location.href });
+  } else {
+    navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard.'));
+  }
+}
+
+function exportPDF() {
+  window.print();
+}
+<\/script>
+</body>
+</html>`;
+}
+/* end buildOutputHTML */
+</script>
+</body>
+</html>
