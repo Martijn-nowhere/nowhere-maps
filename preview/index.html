@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NoWhere Maps — Company Preview</title>
+<meta name="description" content="See your company's environmental footprint pinned to real locations. A NoWhere Maps preview."/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:'Roboto',Arial,sans-serif;font-size:14px;color:#3c4043;background:#fff;}
+#app{display:flex;flex-direction:column;height:100vh;}
+#topbar{display:flex;align-items:center;gap:12px;padding:8px 16px;background:#fff;border-bottom:1px solid #e0e0e0;box-shadow:0 1px 3px rgba(0,0,0,0.08);z-index:1000;flex-shrink:0;}
+.logo-wrap{display:flex;align-items:center;gap:8px;flex-shrink:0;text-decoration:none;}
+.logo-text{font-family:'Google Sans',sans-serif;font-size:20px;letter-spacing:-0.5px;}
+.logo-text .n{color:#4285F4}.logo-text .o1{color:#EA4335}.logo-text .w{color:#FBBC04}.logo-text .h{color:#4285F4}.logo-text .e{color:#34A853}.logo-text .r{color:#EA4335}.logo-text .e2{color:#4285F4}
+.logo-divider{width:1px;height:24px;background:#e0e0e0;flex-shrink:0;}
+.preview-badge{font-size:12px;color:#5f6368;background:#f1f3f4;padding:3px 10px;border-radius:12px;flex-shrink:0;}
+.sor-badge{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:#5f6368;flex-shrink:0;white-space:nowrap;}
+.sor-badge a{color:#1a73e8;text-decoration:none;font-weight:500;}
+.sor-badge a:hover{text-decoration:underline;}
+.sor-dot{width:8px;height:8px;border-radius:50%;background:#0db762;flex-shrink:0;}
+#content{display:flex;flex:1;overflow:hidden;outline:3px solid #0db762;}
+#sidebar{width:380px;flex-shrink:0;display:flex;flex-direction:column;background:#fff;overflow:hidden;box-shadow:2px 0 4px rgba(0,0,0,0.06);z-index:10;}
+
+/* Upload panel */
+#upload-panel{display:flex;flex-direction:column;flex:1;overflow-y:auto;padding:20px 16px;}
+.upload-heading{font-family:'Google Sans',sans-serif;font-size:17px;font-weight:400;color:#202124;margin-bottom:6px;}
+.upload-subtext{font-size:12px;color:#70757a;line-height:1.6;margin-bottom:20px;}
+.field-label{font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:#9aa0a6;margin-bottom:5px;font-weight:500;}
+.text-input{width:100%;padding:9px 12px;border:1px solid #dadce0;border-radius:8px;font-size:13px;font-family:'Roboto',sans-serif;color:#3c4043;outline:none;transition:border-color 0.15s,box-shadow 0.15s;margin-bottom:14px;}
+.text-input:focus{border-color:#1a73e8;box-shadow:0 0 0 2px rgba(26,115,232,0.15);}
+.drop-zone{border:2px dashed #dadce0;border-radius:10px;padding:24px 16px;text-align:center;cursor:pointer;transition:border-color 0.15s,background 0.15s;margin-bottom:14px;position:relative;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:#1a73e8;background:#f0f6ff;}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
+.drop-icon{color:#9aa0a6;margin-bottom:8px;}
+.drop-text{font-size:13px;color:#5f6368;line-height:1.5;}
+.drop-text strong{color:#1a73e8;}
+.file-chosen{font-size:12px;color:#34A853;margin-top:6px;font-weight:500;}
+.key-note{font-size:11px;color:#9aa0a6;line-height:1.5;margin-bottom:14px;}
+.generate-btn{width:100%;padding:10px;background:#1a73e8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:'Roboto',sans-serif;cursor:pointer;transition:background 0.15s;}
+.generate-btn:hover{background:#1557b0;}
+.generate-btn:disabled{background:#dadce0;color:#9aa0a6;cursor:not-allowed;}
+.divider{height:1px;background:#e8eaed;margin:18px 0;}
+.or-text{text-align:center;font-size:11px;color:#9aa0a6;margin-bottom:14px;}
+
+/* Progress */
+#progress-panel{display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px 24px;text-align:center;}
+.progress-title{font-family:'Google Sans',sans-serif;font-size:16px;color:#202124;margin-bottom:8px;}
+.progress-sub{font-size:12px;color:#70757a;line-height:1.6;margin-bottom:24px;}
+.progress-bar-wrap{width:100%;height:4px;background:#e8eaed;border-radius:2px;overflow:hidden;margin-bottom:12px;}
+.progress-bar{height:100%;background:#1a73e8;border-radius:2px;transition:width 0.5s ease;width:0%;}
+.progress-steps{font-size:11px;color:#9aa0a6;line-height:2;}
+
+/* Results sidebar */
+#result-panel{display:none;flex-direction:column;flex:1;overflow:hidden;}
+#result-header{padding:14px 16px 10px;border-bottom:1px solid #e8eaed;flex-shrink:0;}
+.result-company{font-family:'Google Sans',sans-serif;font-size:16px;font-weight:400;color:#202124;}
+.result-meta{font-size:11px;color:#70757a;margin-top:2px;}
+.result-actions{display:flex;gap:8px;margin-top:10px;}
+.action-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:5px 12px;border-radius:16px;border:1px solid #dadce0;color:#5f6368;background:#fff;cursor:pointer;font-family:'Roboto',sans-serif;transition:all 0.12s;}
+.action-chip:hover{border-color:#aaa;color:#3c4043;}
+.action-chip.primary{background:#1a73e8;border-color:#1a73e8;color:#fff;}
+.action-chip.primary:hover{background:#1557b0;}
+#result-list{overflow-y:auto;flex:1;}
+.place-item{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid #f1f3f4;cursor:pointer;transition:background 0.1s;}
+.place-item:hover{background:#f8f9fa;}
+.place-item.active{background:#e8f0fe;}
+.place-icon{width:40px;height:40px;border-radius:50%;background:#fce8e6;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.place-info{flex:1;min-width:0;}
+.place-info h3{font-size:14px;font-weight:500;color:#202124;line-height:1.3;margin-bottom:2px;}
+.place-meta-row{display:flex;align-items:center;gap:6px;margin-bottom:2px;}
+.place-stars{color:#EA4335;font-size:12px;letter-spacing:1px;}
+.place-star-num{font-size:12px;color:#70757a;}
+.place-address{font-size:12px;color:#70757a;font-style:italic;line-height:1.4;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.place-snippet{font-size:12px;color:#3c4043;line-height:1.5;}
+.place-chips{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;}
+.chip{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;}
+.chip.cat{background:#e8f0fe;color:#1a73e8;}
+.chip.waste{background:#e6f4ea;color:#137333;}
+
+/* Detail panel */
+#detail-panel{display:none;flex-direction:column;flex:1;overflow:hidden;}
+#detail-panel.visible{display:flex;}
+#detail-header{padding:14px 16px 0;flex-shrink:0;}
+.back-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#1a73e8;cursor:pointer;border:none;background:none;padding:0;margin-bottom:12px;font-family:'Roboto',sans-serif;}
+.back-btn:hover{text-decoration:underline;}
+#detail-scroll{overflow-y:auto;flex:1;padding:0 16px 20px;}
+.detail-name{font-family:'Google Sans',sans-serif;font-size:22px;font-weight:400;color:#202124;line-height:1.3;margin-bottom:4px;}
+.detail-type{font-size:13px;color:#70757a;margin-bottom:8px;font-style:italic;}
+.detail-stars-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.detail-stars-big{color:#EA4335;font-size:18px;letter-spacing:2px;}
+.detail-star-num-big{font-size:18px;font-weight:500;color:#202124;}
+.detail-review-count{font-size:13px;color:#70757a;}
+.detail-divider{height:1px;background:#e8eaed;margin:12px 0;}
+.detail-section-label{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:#70757a;margin-bottom:6px;font-weight:500;}
+.detail-review-box{background:#f8f9fa;border-radius:8px;padding:12px 14px;margin-bottom:12px;}
+.review-text{font-size:13px;line-height:1.7;color:#3c4043;}
+.review-sig{font-size:11px;color:#9aa0a6;margin-top:6px;font-style:italic;}
+.pin-note-box{display:flex;gap:10px;align-items:flex-start;background:#fef7e0;border-radius:8px;padding:10px 12px;margin-bottom:12px;}
+.pin-note-icon{flex-shrink:0;margin-top:1px;}
+.pin-note-text{font-size:12px;line-height:1.6;color:#5f4200;}
+.tags-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+.tag{font-size:11px;padding:3px 10px;border-radius:16px;border:1px solid #dadce0;color:#5f6368;background:#fff;}
+.cta-footer{margin-top:16px;padding:14px;background:#f1f8f4;border-radius:8px;border-left:3px solid #0db762;}
+.cta-footer p{font-size:12px;line-height:1.6;color:#3c4043;margin-bottom:8px;}
+.cta-footer a{color:#0db762;text-decoration:none;font-weight:500;}
+.cta-footer a:hover{text-decoration:underline;}
+.cta-btn{display:inline-block;background:#0db762;color:#fff;text-decoration:none;padding:7px 16px;border-radius:6px;font-size:12px;font-weight:500;margin-top:4px;}
+.cta-btn:hover{background:#0a9e54;color:#fff;}
+
+/* Error */
+.error-box{background:#fce8e6;border-radius:8px;padding:12px 14px;font-size:12px;color:#c5221f;line-height:1.6;margin-top:12px;}
+
+#map{flex:1;}
+.nm-popup{font-family:'Roboto',Arial,sans-serif;min-width:200px;}
+.nm-popup-title{font-family:'Google Sans',sans-serif;font-size:14px;font-weight:500;color:#202124;margin-bottom:2px;line-height:1.3;}
+.nm-popup-address{font-size:11px;color:#70757a;font-style:italic;margin-bottom:4px;}
+.nm-popup-stars{font-size:13px;color:#EA4335;margin-bottom:3px;}
+.nm-popup-tagline{font-size:11px;color:#9aa0a6;font-style:italic;}
+.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background-color:rgba(234,67,53,0.15)!important;}
+.marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background-color:rgba(234,67,53,0.75)!important;color:#fff!important;font-family:'Roboto',sans-serif!important;font-weight:500!important;}
+#result-list::-webkit-scrollbar,#detail-scroll::-webkit-scrollbar,#upload-panel::-webkit-scrollbar{width:6px;}
+#result-list::-webkit-scrollbar-track,#detail-scroll::-webkit-scrollbar-track,#upload-panel::-webkit-scrollbar-track{background:transparent;}
+#result-list::-webkit-scrollbar-thumb,#detail-scroll::-webkit-scrollbar-thumb,#upload-panel::-webkit-scrollbar-thumb{background:#dadce0;border-radius:3px;}
+@media(max-width:680px){#sidebar{width:100%;position:absolute;bottom:0;left:0;right:0;z-index:20;height:55vh;box-shadow:0 -2px 8px rgba(0,0,0,0.1);}#content{position:relative;}#map{position:absolute;inset:0;}.sor-badge span{display:none;}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <a class="logo-wrap" href="../">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M14 2C8.477 2 4 6.477 4 12c0 7.5 10 16 10 16s10-8.5 10-16c0-5.523-4.477-10-10-10z" fill="#EA4335"/><circle cx="14" cy="12" r="4.5" fill="white"/></svg>
+      <div class="logo-text"><span class="n">N</span><span class="o1">o</span><span class="w">W</span><span class="h">h</span><span class="e">e</span><span class="r">r</span><span class="e2">e</span><span style="color:#5f6368;font-size:16px;margin-left:2px;">Maps</span></div>
+    </a>
+    <div class="logo-divider"></div>
+    <span class="preview-badge">Preview Generator</span>
+    <div class="sor-badge">
+      <div class="sor-dot"></div>
+      <span>A </span><a href="https://www.schoolofrecycling.com" target="_blank">School of Recycling</a><span> project</span>
+    </div>
+  </div>
+  <div id="content">
+    <div id="sidebar">
+
+      <!-- Upload panel -->
+      <div id="upload-panel">
+        <div class="upload-heading">Generate a company preview</div>
+        <div class="upload-subtext">Upload a CSR, MVO, or sustainability report PDF. We'll read it and pin your company's environmental footprint to the map — in the same tone as the rest of NoWhere Maps.</div>
+
+        <div class="field-label">Company name</div>
+        <input type="text" id="company-name" class="text-input" placeholder="e.g. Remia, Unilever, IKEA"/>
+
+        <div class="field-label">Report PDF</div>
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="pdf-input" accept=".pdf" onchange="onFileSelected(this)"/>
+          <div class="drop-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="#9aa0a6"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15h8v2H8v-2zm0-4h8v2H8v-2z"/></svg>
+          </div>
+          <div class="drop-text">Drop PDF here or <strong>browse</strong><br/><span style="font-size:11px;color:#9aa0a6;">Max 50 pages extracted</span></div>
+          <div class="file-chosen" id="file-chosen" style="display:none"></div>
+        </div>
+
+        <div id="api-key-section">
+          <div class="field-label">Anthropic API key</div>
+          <input type="password" id="api-key" class="text-input" placeholder="sk-ant-..."/>
+          <div class="key-note">Key is used only in your browser. Never sent anywhere except directly to api.anthropic.com.</div>
+        </div>
+
+        <button class="generate-btn" id="generate-btn" onclick="startGenerate()" disabled>Generate map preview</button>
+        <div id="error-box" style="display:none" class="error-box"></div>
+
+        <div class="divider"></div>
+        <div style="font-size:11px;color:#9aa0a6;line-height:1.7;">
+          Generated pins follow the NoWhere Maps format: real locations, deadpan Google Maps review tone, no activism energy. The output is a shareable URL you can send to prospects.
+        </div>
+      </div>
+
+      <!-- Progress panel -->
+      <div id="progress-panel">
+        <svg width="40" height="40" viewBox="0 0 28 28" fill="none" style="margin-bottom:16px;"><path d="M14 2C8.477 2 4 6.477 4 12c0 7.5 10 16 10 16s10-8.5 10-16c0-5.523-4.477-10-10-10z" fill="#EA4335"/><circle cx="14" cy="12" r="4.5" fill="white"/></svg>
+        <div class="progress-title">Generating your preview</div>
+        <div class="progress-sub" id="progress-sub">Reading PDF…</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+        <div class="progress-steps" id="progress-steps"></div>
+      </div>
+
+      <!-- Results panel -->
+      <div id="result-panel">
+        <div id="result-header">
+          <div class="result-company" id="result-company"></div>
+          <div class="result-meta">10 locations generated · NoWhere Maps preview</div>
+          <div class="result-actions">
+            <button class="action-chip primary" onclick="copyShareURL()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+              Copy share link
+            </button>
+            <button class="action-chip" onclick="resetToUpload()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+              New preview
+            </button>
+          </div>
+        </div>
+        <div id="result-list"></div>
+        <div id="detail-panel">
+          <div id="detail-header">
+            <button class="back-btn" onclick="showResultList()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+              All locations
+            </button>
+          </div>
+          <div id="detail-scroll">
+            <div class="detail-name" id="d-name"></div>
+            <div class="detail-type" id="d-type"></div>
+            <div class="detail-stars-row">
+              <span class="detail-star-num-big" id="d-num"></span>
+              <span class="detail-stars-big" id="d-stars"></span>
+              <span class="detail-review-count">1 review — the only one possible</span>
+            </div>
+            <div class="detail-divider"></div>
+            <div class="detail-section-label">Review</div>
+            <div class="detail-review-box">
+              <div class="review-text" id="d-review"></div>
+              <div class="review-sig" id="d-sig"></div>
+            </div>
+            <div class="detail-section-label">Why this pin</div>
+            <div class="pin-note-box">
+              <div class="pin-note-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="#F9AB00"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
+              <div class="pin-note-text" id="d-pin-note"></div>
+            </div>
+            <div class="detail-section-label">Tags</div>
+            <div class="tags-wrap" id="d-tags"></div>
+            <div class="cta-footer">
+              <p>This is a <strong>NoWhere Maps</strong> preview — generated from the company's own CSR report. The full map covers 40+ global environmental phenomena, written in the same tone.</p>
+              <a href="https://www.schoolofrecycling.com" target="_blank" class="cta-btn">Learn about the full project →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /sidebar -->
+    <div id="map"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+/* ─── CONFIG ───────────────────────────────────────────────
+   Pre-fill ANTHROPIC_API_KEY to hide the key field from users.
+   Leave empty to show the input field.
+─────────────────────────────────────────────────────────── */
+const CONFIG = {
+  ANTHROPIC_API_KEY: ''
+};
+
+/* ─── state ─────────────────────────────────────────────── */
+let selectedFile = null;
+let generatedPins = [];
+let generatedCompany = '';
+let map, clusterGroup, markers = [], activeIdx = -1;
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+/* ─── init ──────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  if (CONFIG.ANTHROPIC_API_KEY) {
+    document.getElementById('api-key-section').style.display = 'none';
+  }
+  initMap();
+  checkURLData();
+  setupDropZone();
+  document.getElementById('company-name').addEventListener('input', validateForm);
+  document.getElementById('api-key').addEventListener('input', validateForm);
+});
+
+function setupDropZone() {
+  const zone = document.getElementById('drop-zone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f && f.type === 'application/pdf') setFile(f);
+  });
+}
+
+function onFileSelected(input) {
+  if (input.files[0]) setFile(input.files[0]);
+}
+
+function setFile(f) {
+  selectedFile = f;
+  const el = document.getElementById('file-chosen');
+  el.textContent = '✓ ' + f.name;
+  el.style.display = 'block';
+  document.querySelector('.drop-text').style.display = 'none';
+  validateForm();
+}
+
+function validateForm() {
+  const name = document.getElementById('company-name').value.trim();
+  const key = CONFIG.ANTHROPIC_API_KEY || document.getElementById('api-key').value.trim();
+  const ok = name.length > 0 && selectedFile !== null && key.length > 0;
+  document.getElementById('generate-btn').disabled = !ok;
+}
+
+/* ─── PDF extraction ────────────────────────────────────── */
+async function extractPDFText(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const maxPages = Math.min(pdf.numPages, 50);
+  let text = '';
+  for (let i = 1; i <= maxPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it => it.str).join(' ') + '\n';
+    if (text.length > 40000) break;
+  }
+  return text.slice(0, 40000);
+}
+
+/* ─── generation ────────────────────────────────────────── */
+async function startGenerate() {
+  hideError();
+  const company = document.getElementById('company-name').value.trim();
+  const apiKey = CONFIG.ANTHROPIC_API_KEY || document.getElementById('api-key').value.trim();
+
+  showPanel('progress');
+  setProgress(10, 'Reading PDF…');
+
+  let pdfText = '';
+  try {
+    pdfText = await extractPDFText(selectedFile);
+  } catch(e) {
+    showPanel('upload');
+    showError('Could not read PDF: ' + e.message);
+    return;
+  }
+
+  setProgress(40, 'Sending to Claude…');
+
+  const prompt = buildPrompt(company, pdfText);
+
+  let result;
+  try {
+    result = await callClaude(apiKey, prompt);
+  } catch(e) {
+    showPanel('upload');
+    showError('API error: ' + e.message);
+    return;
+  }
+
+  setProgress(85, 'Parsing locations…');
+
+  let pins;
+  try {
+    pins = parseResponse(result);
+  } catch(e) {
+    showPanel('upload');
+    showError('Could not parse Claude response. Try again.\n\n' + e.message);
+    return;
+  }
+
+  setProgress(100, 'Done.');
+
+  generatedPins = pins;
+  generatedCompany = company;
+
+  encodeToURL(company, pins);
+  renderResults(company, pins);
+  showPanel('result');
+}
+
+function buildPrompt(company, pdfText) {
+  return `You are generating pins for NoWhere Maps — a satirical Google Maps-style project that pins real environmental disasters and corporate environmental impact to geographic locations, written as deadpan 1-star review-style copy.
+
+TONE RULES (non-negotiable):
+- Deadpan. No activism energy. No explanation — trust the audience to connect the dots.
+- Written as a genuine Google Maps review left by someone who just happened to be there.
+- Funny and factually credible simultaneously.
+- Never preachy, never angry, never sarcastic in an obvious way.
+- The humour comes from the gap between the mundane review format and the thing being reviewed.
+- The sig (signature) is "— Posted from: [absurd but fitting location]"
+
+SCHEMA: Each pin must be a JSON object with these exact fields:
+{
+  "name": "Short name for the location/phenomenon",
+  "type": "Brief descriptor · Geographic scope",
+  "address": "No fixed address · [context] · [year or qualifier]",
+  "stars": 1,
+  "category": "Ocean & water" | "Atmosphere" | "Soil & land" | "Corporate" | "Policy & greenwashing",
+  "wasteType": "Plastic" | "Organic" | "Textile" | "E-waste" | "Mixed",
+  "reviewShort": "One punchy sentence. 10-20 words. The hook.",
+  "reviewFull": "2-4 sentences in review style. Specific facts, figures, dates. Ends with a dry kicker.",
+  "sig": "— Posted from: [absurd location]",
+  "pinNote": "Factual explanation of why this location was chosen for the pin. Reads like a serious footnote.",
+  "lat": 0.0,
+  "lng": 0.0,
+  "tags": ["tag1", "tag2", "tag3", "tag4"]
+}
+
+EXAMPLES of tone (do not copy these, just match the voice):
+reviewShort: "421ppm and climbing. Invisible, odourless, planet-wide."
+reviewShort: "Intimate venue. Did not book. Already checked in."
+reviewFull ending: "Two stars because the water pressure was fine."
+sig: "— Posted from: an accounting document"
+sig: "— Posted from: the bottom of a plastic container"
+
+NOW YOUR TASK:
+Company: ${company}
+Report text (extracted from their CSR/sustainability/MVO PDF):
+
+${pdfText}
+
+---
+
+Read the report carefully. Identify 10 real, specific environmental impacts, supply chain issues, product lifecycle problems, carbon commitments vs. reality gaps, packaging issues, or raw material sourcing problems that this specific company is connected to.
+
+Each pin should be:
+- Tied to a real geographic location (pinned to the most relevant specific place)
+- Based on facts from the report OR well-documented facts about this company's industry/products
+- In at least 3 different categories
+- At least 2 different wasteTypes
+
+IMPORTANT: stars should almost always be 1. Occasionally 2. Never 3+ unless something is genuinely better than expected (rare).
+
+Return ONLY a valid JSON array of exactly 10 objects. No markdown, no explanation, no preamble. Just the raw JSON array.`;
+}
+
+async function callClaude(apiKey, prompt) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-8',
+      max_tokens: 8000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || resp.statusText);
+  }
+  const data = await resp.json();
+  return data.content[0].text;
+}
+
+function parseResponse(text) {
+  const clean = text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
+  const arr = JSON.parse(clean);
+  if (!Array.isArray(arr)) throw new Error('Expected JSON array');
+  return arr.map(p => ({
+    name: p.name || 'Unknown location',
+    type: p.type || '',
+    address: p.address || 'No fixed address',
+    stars: Math.min(5, Math.max(1, parseInt(p.stars) || 1)),
+    category: p.category || 'Corporate',
+    wasteType: p.wasteType || 'Mixed',
+    reviewShort: p.reviewShort || '',
+    reviewFull: p.reviewFull || '',
+    sig: p.sig || '— Posted from: somewhere',
+    pinNote: p.pinNote || '',
+    lat: parseFloat(p.lat) || 0,
+    lng: parseFloat(p.lng) || 0,
+    tags: Array.isArray(p.tags) ? p.tags : []
+  }));
+}
+
+/* ─── URL encode/decode ─────────────────────────────────── */
+function encodeToURL(company, pins) {
+  const payload = JSON.stringify({ company, pins });
+  const encoded = btoa(unescape(encodeURIComponent(payload)));
+  const url = new URL(window.location.href.split('#')[0]);
+  url.hash = 'data=' + encoded;
+  window.history.replaceState(null, '', url.toString());
+}
+
+function checkURLData() {
+  const hash = window.location.hash;
+  if (!hash.startsWith('#data=')) return;
+  try {
+    const encoded = hash.slice(6);
+    const payload = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+    if (payload.company && Array.isArray(payload.pins)) {
+      generatedPins = payload.pins;
+      generatedCompany = payload.company;
+      renderResults(payload.company, payload.pins);
+      showPanel('result');
+    }
+  } catch(e) {
+    console.warn('Could not decode URL data:', e);
+  }
+}
+
+function copyShareURL() {
+  const url = window.location.href;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.querySelector('.action-chip.primary');
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✓ Copied!';
+      setTimeout(() => { btn.innerHTML = orig; }, 2000);
+    });
+  } else {
+    prompt('Copy this link:', url);
+  }
+}
+
+/* ─── map ───────────────────────────────────────────────── */
+function initMap() {
+  map = L.map('map', { zoomControl: true, scrollWheelZoom: true }).setView([20, 10], 2);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 18
+  }).addTo(map);
+  clusterGroup = L.markerClusterGroup({ maxClusterRadius: 60, spiderfyOnMaxZoom: true, showCoverageOnHover: false });
+  map.addLayer(clusterGroup);
+}
+
+function mkIcon(active) {
+  return L.divIcon({
+    className: '',
+    html: `<svg width="${active?32:24}" height="${active?48:36}" viewBox="0 0 24 36"><path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 24 12 24s12-15 12-24C24 5.373 18.627 0 12 0z" fill="${active?'#1a73e8':'#EA4335'}"/><circle cx="12" cy="12" r="5" fill="white"/></svg>`,
+    iconSize: [active?32:24, active?48:36],
+    iconAnchor: [active?16:12, active?48:36],
+    popupAnchor: [0, active?-48:-36]
+  });
+}
+
+function renderMapPins(pins) {
+  clusterGroup.clearLayers();
+  markers = [];
+  pins.forEach((p, i) => {
+    const m = L.marker([p.lat, p.lng], { icon: mkIcon(false) })
+      .bindPopup(`<div class="nm-popup"><div class="nm-popup-title">${p.name}</div><div class="nm-popup-address">${p.address}</div><div class="nm-popup-stars">${starStr(p.stars)} ${p.stars}.0</div><div class="nm-popup-tagline">"Could not find this on Google Maps. It found me."</div></div>`, { maxWidth: 260 });
+    m.on('click', () => showDetail(i));
+    markers.push(m);
+    clusterGroup.addLayer(m);
+  });
+  if (pins.length > 0) {
+    try {
+      map.fitBounds(clusterGroup.getBounds().pad(0.3), { maxZoom: 5 });
+    } catch(e) {}
+  }
+}
+
+/* ─── render results ────────────────────────────────────── */
+function starStr(n) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
+
+function renderResults(company, pins) {
+  document.getElementById('result-company').textContent = company + ' — NoWhere Maps preview';
+  const list = document.getElementById('result-list');
+  list.innerHTML = pins.map((p, i) => `
+    <div class="place-item" id="item-${i}" onclick="showDetail(${i})">
+      <div class="place-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="#EA4335"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
+      <div class="place-info">
+        <h3>${p.name}</h3>
+        <div class="place-meta-row"><span class="place-stars">${starStr(p.stars)}</span><span class="place-star-num">${p.stars}.0</span></div>
+        <div class="place-address">${p.address}</div>
+        <div class="place-snippet">${p.reviewShort}</div>
+        <div class="place-chips"><span class="chip cat">${p.category}</span><span class="chip waste">${p.wasteType}</span></div>
+      </div>
+    </div>`).join('');
+  renderMapPins(pins);
+}
+
+function showDetail(i) {
+  const p = generatedPins[i];
+  if (activeIdx >= 0 && markers[activeIdx]) markers[activeIdx].setIcon(mkIcon(false));
+  activeIdx = i;
+  if (markers[i]) markers[i].setIcon(mkIcon(true));
+
+  document.getElementById('result-list').style.display = 'none';
+  document.getElementById('detail-panel').classList.add('visible');
+  document.getElementById('d-name').textContent = p.name;
+  document.getElementById('d-type').textContent = p.type;
+  document.getElementById('d-num').textContent = p.stars + '.0';
+  document.getElementById('d-stars').textContent = starStr(p.stars);
+  document.getElementById('d-review').textContent = p.reviewFull;
+  document.getElementById('d-sig').textContent = p.sig;
+  document.getElementById('d-pin-note').textContent = p.pinNote;
+  document.getElementById('d-tags').innerHTML = p.tags.map(t => `<span class="tag">${t}</span>`).join('');
+  document.querySelectorAll('.place-item').forEach((el, idx) => el.classList.toggle('active', idx === i));
+  map.flyTo([p.lat, p.lng], 6, { duration: 1.4, easeLinearity: 0.4 });
+  setTimeout(() => { if (markers[i]) markers[i].openPopup(); }, 1500);
+}
+
+function showResultList() {
+  if (activeIdx >= 0 && markers[activeIdx]) markers[activeIdx].setIcon(mkIcon(false));
+  activeIdx = -1;
+  document.getElementById('result-list').style.display = 'block';
+  document.getElementById('detail-panel').classList.remove('visible');
+  markers.forEach(m => m.closePopup());
+  try { map.fitBounds(clusterGroup.getBounds().pad(0.3), { maxZoom: 5 }); } catch(e) {}
+}
+
+function resetToUpload() {
+  generatedPins = [];
+  generatedCompany = '';
+  markers = [];
+  clusterGroup.clearLayers();
+  activeIdx = -1;
+  window.history.replaceState(null, '', window.location.pathname);
+  showPanel('upload');
+}
+
+/* ─── UI helpers ────────────────────────────────────────── */
+function showPanel(name) {
+  document.getElementById('upload-panel').style.display = name === 'upload' ? 'flex' : 'none';
+  document.getElementById('progress-panel').style.display = name === 'progress' ? 'flex' : 'none';
+  document.getElementById('result-panel').style.display = name === 'result' ? 'flex' : 'none';
+}
+
+function setProgress(pct, msg) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-sub').textContent = msg;
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-box');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('error-box').style.display = 'none';
+}
+</script>
+</body>
+</html>
