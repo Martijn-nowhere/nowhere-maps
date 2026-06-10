@@ -49,6 +49,18 @@ a{color:#1a73e8;text-decoration:none;}a:hover{text-decoration:underline;}
 .logo-thumb{width:44px;height:44px;border-radius:8px;object-fit:contain;border:1px solid #e0e0e0;background:#f8f9fa;}
 .key-note{font-size:11px;color:#9aa0a6;line-height:1.5;margin-top:-10px;margin-bottom:14px;}
 
+/* tone selector */
+.tone-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0;}
+.tone-card{border:2px solid #dadce0;border-radius:10px;padding:14px 16px;cursor:pointer;transition:border-color 0.15s,background 0.15s;user-select:none;position:relative;}
+.tone-card:hover{border-color:#1a73e8;background:#f8fbff;}
+.tone-card.selected{border-color:#1a73e8;background:#f0f6ff;}
+.tone-card.selected-corp{border-color:#34A853;background:#f0faf3;}
+.tone-label{font-family:'Google Sans',sans-serif;font-size:13px;font-weight:500;color:#202124;margin-bottom:3px;}
+.tone-sub{font-size:11px;color:#70757a;line-height:1.5;}
+.tone-check{position:absolute;top:10px;right:12px;width:16px;height:16px;border-radius:50%;border:2px solid #dadce0;background:#fff;transition:all 0.15s;}
+.tone-card.selected .tone-check{border-color:#1a73e8;background:#1a73e8;}
+.tone-card.selected-corp .tone-check{border-color:#34A853;background:#34A853;}
+
 /* generate button */
 .generate-btn{width:100%;padding:12px;background:#1a73e8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:'Google Sans',sans-serif;cursor:pointer;transition:background 0.15s;letter-spacing:0.2px;}
 .generate-btn:hover{background:#1557b0;}
@@ -185,6 +197,23 @@ a{color:#1a73e8;text-decoration:none;}a:hover{text-decoration:underline;}
       </div>
     </div>
 
+    <div class="card">
+      <div class="card-title">Edition type</div>
+      <div class="card-sub">Affects how Claude frames the pins. Same facts — different angle.</div>
+      <div class="tone-grid">
+        <div class="tone-card selected" id="tone-advocacy" onclick="selectTone('advocacy')">
+          <div class="tone-check"></div>
+          <div class="tone-label">NGO / Media edition</div>
+          <div class="tone-sub">Sharp, no mercy. Exposes the gap between claims and reality. Default NoWhere Maps tone.</div>
+        </div>
+        <div class="tone-card" id="tone-corporate" onclick="selectTone('corporate')">
+          <div class="tone-check"></div>
+          <div class="tone-label">Company edition</div>
+          <div class="tone-sub">Same facts, honest self-reflection. Problems framed as what they're working on. Dry, credible — never greenwashing.</div>
+        </div>
+      </div>
+    </div>
+
     <button class="generate-btn" id="generate-btn" onclick="startGenerate()" disabled>Generate branded preview</button>
     <div class="error-box" id="error-box"></div>
   </div><!-- /form-section -->
@@ -262,6 +291,15 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 /* ─── state ─────────────────────────────────────────────── */
 let pdfFile = null, logoFile = null, logoDataURL = '';
 let generatedHTML = '', generatedSlug = '';
+let selectedTone = 'advocacy';
+
+function selectTone(mode) {
+  selectedTone = mode;
+  const adv  = document.getElementById('tone-advocacy');
+  const corp = document.getElementById('tone-corporate');
+  adv.className  = 'tone-card' + (mode === 'advocacy'  ? ' selected' : '');
+  corp.className = 'tone-card' + (mode === 'corporate' ? ' selected-corp' : '');
+}
 
 /* ─── init ──────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
@@ -409,7 +447,7 @@ async function startGenerate() {
   setProgress(35, 'Sending to Claude…', 'Analysing report and generating pins');
 
   let raw;
-  try { raw = await callClaude(apiKey, buildPrompt(company, color1, pdfText)); }
+  try { raw = await callClaude(apiKey, buildPrompt(company, color1, pdfText, selectedTone)); }
   catch(e) { showSection('form'); showError('error-box', 'API error: ' + e.message); return; }
 
   setProgress(80, 'Building branded page…', 'Assembling HTML output');
@@ -422,7 +460,8 @@ async function startGenerate() {
   generatedHTML = buildOutputHTML({ company, slug,
     color1, color2, color3, logo: logoDataURL,
     tagline: parsed.tagline, customCategory: parsed.customCategory,
-    hqLat: parsed.hqLat, hqLng: parsed.hqLng, pins: parsed.pins });
+    hqLat: parsed.hqLat, hqLng: parsed.hqLng, pins: parsed.pins,
+    tone: selectedTone });
 
   setProgress(100, 'Done.', '');
   renderResult(company, parsed);
@@ -430,17 +469,30 @@ async function startGenerate() {
 }
 
 /* ─── Claude prompt ─────────────────────────────────────── */
-function buildPrompt(company, color1, pdfText) {
-  return `You are generating content for NoWhere Maps — a satirical Google Maps-style project that pins real environmental impacts to geographic locations, written as deadpan 1-star review copy.
-
-LANGUAGE: Detect the language of the report and write ALL output — pin names, addresses, reviewShort, reviewFull, sig, pinNote, tagline, customCategory, respondsNote — in that same language. If the report is in Dutch, write in Dutch. If in German, write in German. If in English, write in English. Match the language exactly, including the signature format (e.g. "— Geplaatst vanuit: [locatie]" for Dutch).
-
+function buildPrompt(company, color1, pdfText, tone) {
+  const toneBlock = tone === 'corporate' ? `
+EDITION: Company edition (honest self-reflection)
+TONE RULES (strict):
+- Same deadpan style, same real facts — but the company gets benefit of the doubt.
+- Frame issues as "what they're working on" not "what they're hiding."
+- Acknowledge genuine progress where the report shows it — don't suppress it.
+- Honest and dry, never cheerful, never greenwashing, never preachy.
+- The review voice is still that of an independent observer — just a fair one.
+- companyResponds pins should feel like transparency, not spin.
+- Signature format: "— Posted from: [wry but not hostile location]"
+- reviewFull kicker: wry observation, not a stinger.` : `
+EDITION: NGO / Media edition (advocacy)
 TONE RULES (strict):
 - Deadpan. No activism energy. No moralising. Trust the audience.
 - Written as a genuine Google Maps review left by someone who happened to be there.
 - Funny and factually credible at the same time.
 - The humour comes from the gap between the mundane review format and the gravity of the subject.
-- Signature format: "— Posted from: [absurd but fitting location]"
+- Signature format: "— Posted from: [absurd but fitting location]"`;
+
+  return `You are generating content for NoWhere Maps — a satirical Google Maps-style project that pins real environmental impacts to geographic locations, written as deadpan 1-star review copy.
+
+LANGUAGE: Detect the language of the report and write ALL output — pin names, addresses, reviewShort, reviewFull, sig, pinNote, tagline, customCategory, respondsNote — in that same language. If the report is in Dutch, write in Dutch. If in German, write in German. If in English, write in English. Match the language exactly, including the signature format (e.g. "— Geplaatst vanuit: [locatie]" for Dutch).
+${toneBlock}
 
 PIN SCHEMA (JSON):
 {
@@ -654,6 +706,7 @@ function buildOutputHTML(cfg) {
   const hq   = JSON.stringify([cfg.hqLat, cfg.hqLng]);
   const pins = JSON.stringify(cfg.pins);
   const slug = cfg.slug;
+  const isCorp = cfg.tone === 'corporate';
 
   /* Tint from tertiary colour for chip backgrounds */
   const hex3 = cfg.color3.replace('#','');
@@ -835,8 +888,9 @@ html,body{height:100%;font-family:'Roboto',Arial,sans-serif;font-size:14px;color
     <div class="modal-title">A ${cfg.company} edition</div>
     <div class="modal-tagline">"${cfg.tagline}"</div>
     <div class="modal-body">
-      This preview was generated from ${cfg.company}'s own sustainability report using NoWhere Maps — a satirical project that pins real environmental phenomena to the map, written as deadpan Google Maps reviews.<br/><br/>
-      The pins reflect what's in the report — and what the report doesn't mention. Green markers show issues where the company has named a concrete response. The rest are still on the map.
+      ${isCorp
+        ? `This edition was built from ${cfg.company}'s own sustainability report — mapping the real-world locations behind the numbers. Green markers show where the company has named a concrete response or programme.`
+        : `This preview was generated from ${cfg.company}'s own sustainability report using NoWhere Maps — a satirical project that pins real environmental phenomena to the map, written as deadpan Google Maps reviews.<br/><br/>The pins reflect what's in the report — and what the report doesn't mention. Green markers show issues where the company has named a concrete response. The rest are still on the map.`}
     </div>
     <button class="modal-close" onclick="document.getElementById('intro-modal').classList.add('gone')">Show me the map</button>
   </div>
@@ -870,7 +924,7 @@ html,body{height:100%;font-family:'Roboto',Arial,sans-serif;font-size:14px;color
         <div class="sh-toggle-row">
           <div class="toggle-wrap" onclick="toggleFix()">
             <div class="toggle" id="fix-toggle"><div class="toggle-knob"></div></div>
-            <span id="toggle-label">Show: what they're fixing</span>
+            <span id="toggle-label">${isCorp ? "Show: concrete responses" : "Show: what they're fixing"}</span>
           </div>
         </div>
       </div>
@@ -945,6 +999,8 @@ const CUSTOM_CAT    = ${cat};
 const HQ            = ${hq};
 const PINS          = ${pins};
 const SLUG          = ${JSON.stringify(slug)};
+const TOGGLE_ON_LABEL  = ${isCorp ? '"Showing: concrete responses"' : '"Showing: what they\'re fixing"'};
+const TOGGLE_OFF_LABEL = ${isCorp ? '"Show: concrete responses"' : '"Show: what they\'re fixing"'};
 
 let map, clusterGroup, markers = [], activeIdx = -1, fixingMode = false;
 
@@ -1098,7 +1154,7 @@ function toggleFix() {
   const t = document.getElementById('fix-toggle');
   t.classList.toggle('on', fixingMode);
   document.getElementById('toggle-label').textContent =
-    fixingMode ? 'Showing: what they\'re fixing' : 'Show: what they\'re fixing';
+    fixingMode ? TOGGLE_ON_LABEL : TOGGLE_OFF_LABEL;
   renderList();
   markers.forEach((m, i) => m.setIcon(getIcon(i, i === activeIdx)));
 }
