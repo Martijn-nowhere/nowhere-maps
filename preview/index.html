@@ -610,7 +610,7 @@ async function pushToGitHub() {
     return;
   }
 
-  const liveURL = `https://${owner.toLowerCase().replace('martijn-nowhere', 'nowheremaps')}.github.io/nowhere-maps/preview/${generatedSlug}/`;
+  const liveURL = `https://${owner.toLowerCase()}.github.io/nowhere-maps/preview/${generatedSlug}/`;
   document.getElementById('gh-success').innerHTML =
     `✓ Pushed to <code>${path}</code>. GitHub Pages will publish shortly.<br/>` +
     `Shareable URL: <a href="${liveURL}" target="_blank">${liveURL}</a>`;
