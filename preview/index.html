@@ -111,9 +111,35 @@ a{color:#1a73e8;text-decoration:none;}a:hover{text-decoration:underline;}
 
 /* error */
 .error-box{background:#fce8e6;border-radius:8px;padding:12px 14px;font-size:12px;color:#c5221f;line-height:1.6;margin-top:12px;display:none;}
+
+/* password gate */
+#pw-gate{position:fixed;inset:0;background:#f8f9fa;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;}
+#pw-gate.gone{display:none;}
+.pw-box{background:#fff;border-radius:16px;border:1px solid #e0e0e0;padding:36px 32px;max-width:360px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.08);}
+.pw-logo{margin-bottom:20px;}
+.pw-title{font-family:'Google Sans',sans-serif;font-size:18px;color:#202124;margin-bottom:6px;}
+.pw-sub{font-size:12px;color:#70757a;margin-bottom:20px;}
+.pw-input{width:100%;padding:10px 14px;border:1px solid #dadce0;border-radius:8px;font-size:14px;font-family:'Roboto',sans-serif;outline:none;text-align:center;letter-spacing:2px;margin-bottom:10px;}
+.pw-input:focus{border-color:#1a73e8;box-shadow:0 0 0 2px rgba(26,115,232,0.15);}
+.pw-btn{width:100%;padding:10px;background:#1a73e8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:'Google Sans',sans-serif;cursor:pointer;}
+.pw-btn:hover{background:#1557b0;}
+.pw-error{font-size:12px;color:#c5221f;margin-top:8px;display:none;}
 </style>
 </head>
 <body>
+
+<div id="pw-gate">
+  <div class="pw-box">
+    <div class="pw-logo">
+      <svg width="32" height="32" viewBox="0 0 28 28" fill="none"><path d="M14 2C8.477 2 4 6.477 4 12c0 7.5 10 16 10 16s10-8.5 10-16c0-5.523-4.477-10-10-10z" fill="#EA4335"/><circle cx="14" cy="12" r="4.5" fill="white"/></svg>
+    </div>
+    <div class="pw-title">NoWhere Maps Generator</div>
+    <div class="pw-sub">Enter the access password to continue.</div>
+    <input type="password" id="pw-input" class="pw-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkPassword()"/>
+    <button class="pw-btn" onclick="checkPassword()">Continue</button>
+    <div class="pw-error" id="pw-error">Incorrect password.</div>
+  </div>
+</div>
 
 <div id="topbar">
   <a class="logo-wrap" href="../">
@@ -296,6 +322,26 @@ a{color:#1a73e8;text-decoration:none;}a:hover{text-decoration:underline;}
    Pre-fill to hide input from users.
 ──────────────────────────────────────────────────────────── */
 const CONFIG = { ANTHROPIC_API_KEY: '' };
+const ACCESS_PASSWORD = 'nowhere2026';
+
+function checkPassword() {
+  const val = document.getElementById('pw-input').value;
+  if (val === ACCESS_PASSWORD) {
+    sessionStorage.setItem('nwm_auth', '1');
+    document.getElementById('pw-gate').classList.add('gone');
+  } else {
+    document.getElementById('pw-error').style.display = 'block';
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+/* check on load */
+if (sessionStorage.getItem('nwm_auth') === '1') {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('pw-gate').classList.add('gone');
+  });
+}
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
