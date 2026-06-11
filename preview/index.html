@@ -186,6 +186,18 @@ a{color:#1a73e8;text-decoration:none;}a:hover{text-decoration:underline;}
         <div class="drop-text"><strong>Browse</strong> or drop PDF here<br/><span style="color:#9aa0a6;">Max 50 pages extracted · File stays in your browser</span></div>
       </div>
       <div id="pdf-chosen" class="file-chosen" style="display:none;margin-top:6px;"></div>
+
+      <div class="field" style="margin-top:16px;margin-bottom:0;">
+        <label class="field-label">Output language</label>
+        <select id="output-language" class="text-input" style="cursor:pointer;">
+          <option value="auto">Auto-detect from report</option>
+          <option value="English">English</option>
+          <option value="Dutch">Dutch</option>
+          <option value="German">German</option>
+          <option value="French">French</option>
+          <option value="Spanish">Spanish</option>
+        </select>
+      </div>
     </div>
 
     <div class="card">
@@ -435,6 +447,7 @@ async function startGenerate() {
   const color2   = getColor(2) || color1;
   const color3   = getColor(3) || color1;
   const apiKey   = CONFIG.ANTHROPIC_API_KEY || document.getElementById('api-key').value.trim();
+  const language = document.getElementById('output-language').value;
   saveKeys(apiKey, document.getElementById('gh-token')?.value.trim());
 
   showSection('progress');
@@ -447,7 +460,7 @@ async function startGenerate() {
   setProgress(35, 'Sending to Claude…', 'Analysing report and generating pins');
 
   let raw;
-  try { raw = await callClaude(apiKey, buildPrompt(company, color1, pdfText, selectedTone)); }
+  try { raw = await callClaude(apiKey, buildPrompt(company, color1, pdfText, selectedTone, language)); }
   catch(e) { showSection('form'); showError('error-box', 'API error: ' + e.message); return; }
 
   setProgress(80, 'Building branded page…', 'Assembling HTML output');
@@ -469,7 +482,7 @@ async function startGenerate() {
 }
 
 /* ─── Claude prompt ─────────────────────────────────────── */
-function buildPrompt(company, color1, pdfText, tone) {
+function buildPrompt(company, color1, pdfText, tone, language) {
   const isCorp = tone === 'corporate';
 
   const toneRules = isCorp ? `
@@ -523,7 +536,9 @@ kicker: "Two stars because the water pressure was fine."`;
 
   return `You are generating content for NoWhere Maps — a project that pins real environmental impacts to geographic locations, written as deadpan Google Maps-style review copy.
 
-LANGUAGE: Detect the language of the report and write ALL output — pin names, addresses, reviewShort, reviewFull, sig, pinNote, tagline, customCategory, respondsNote — in that same language. If the report is in Dutch, write in Dutch. If in German, write in German. If in English, write in English. Match the language exactly, including the signature format (e.g. "— Geplaatst vanuit: [locatie]" for Dutch).
+${language === 'auto'
+  ? `LANGUAGE: Detect the language of the report and write ALL output — pin names, addresses, reviewShort, reviewFull, sig, pinNote, tagline, customCategory, respondsNote — in that same language. Match the language exactly, including the signature format (e.g. "— Geplaatst vanuit: [locatie]" for Dutch, "— Posted from: [location]" for English).`
+  : `LANGUAGE: Write ALL output — pin names, addresses, reviewShort, reviewFull, sig, pinNote, tagline, customCategory, respondsNote — in ${language}, regardless of what language the report is written in. The report is source material only; the output must be entirely in ${language}. Signature format in ${language} (e.g. "— Posted from: [location]" for English, "— Geplaatst vanuit: [locatie]" for Dutch).`}
 ${toneRules}
 
 PIN SCHEMA (JSON):
