@@ -26,6 +26,17 @@ The recurring footer on every listing: *"Could not find this location on Google 
 
 ---
 
+## Generator & live previews
+
+| | URL |
+|---|---|
+| **Generator** | [martijn-nowhere.github.io/nowhere-maps/preview/](https://martijn-nowhere.github.io/nowhere-maps/preview/) |
+| Remia | [martijn-nowhere.github.io/nowhere-maps/preview/remia/](https://martijn-nowhere.github.io/nowhere-maps/preview/remia/) |
+| Verdant Supermarkets Europe | [martijn-nowhere.github.io/nowhere-maps/preview/verdant-supermarkets-europe/](https://martijn-nowhere.github.io/nowhere-maps/preview/verdant-supermarkets-europe/) |
+| DFI Nusantara | [martijn-nowhere.github.io/nowhere-maps/preview/dfi-nusantara/](https://martijn-nowhere.github.io/nowhere-maps/preview/dfi-nusantara/) |
+
+---
+
 ## How to add locations
 
 All locations live in a single array at the top of `index.html`. Each entry looks like this:
