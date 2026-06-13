@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NoWhere Maps — Enviu edition</title>
+<meta name="description" content="Markets that didn't exist, now starting to. Scale still pending. — A NoWhere Maps preview for Enviu."/>
+<meta property="og:title" content="NoWhere Maps × Enviu"/>
+<meta property="og:description" content="Markets that didn't exist, now starting to. Scale still pending."/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --brand:#0006b8;
+  --brand2:#1e2f42;
+  --brand3:#e8f38d;
+  --tint:rgba(232,243,141,0.13);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:'Roboto',Arial,sans-serif;font-size:14px;color:#3c4043;background:#fff;}
+#app{display:flex;flex-direction:column;height:100vh;}
+
+/* topbar */
+#topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:#fff;border-bottom:1px solid #e0e0e0;box-shadow:0 1px 3px rgba(0,0,0,0.08);z-index:1000;flex-shrink:0;border-top:3px solid var(--brand2);}
+.logo-wrap{display:flex;align-items:center;gap:8px;flex-shrink:0;text-decoration:none;}
+.logo-text{font-family:'Google Sans',sans-serif;font-size:18px;letter-spacing:-0.5px;}
+.logo-text .n{color:#4285F4}.logo-text .o1{color:#EA4335}.logo-text .w{color:#FBBC04}.logo-text .h{color:#4285F4}.logo-text .e{color:#34A853}.logo-text .r{color:#EA4335}.logo-text .e2{color:#4285F4}
+.tb-divider{width:1px;height:22px;background:#e0e0e0;flex-shrink:0;}
+.company-header{display:flex;align-items:center;gap:8px;}
+.company-logo{height:28px;max-width:80px;object-fit:contain;}
+.edition-text{font-size:12px;color:#5f6368;white-space:nowrap;}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.sor-badge{display:flex;align-items:center;gap:5px;font-size:11px;color:#5f6368;white-space:nowrap;}
+.sor-dot{width:7px;height:7px;border-radius:50%;background:#0db762;}
+.sor-badge a{color:#0db762;text-decoration:none;font-weight:500;}
+
+/* toggle */
+.toggle-wrap{display:flex;align-items:center;gap:6px;font-size:11px;color:#5f6368;cursor:pointer;user-select:none;}
+.toggle{width:32px;height:18px;border-radius:9px;background:#dadce0;position:relative;transition:background 0.2s;flex-shrink:0;}
+.toggle.on{background:var(--brand);}
+.toggle-knob{width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);}
+.toggle.on .toggle-knob{left:16px;}
+
+/* layout */
+#content{display:flex;flex:1;overflow:hidden;outline:3px solid var(--brand2);}
+#sidebar{width:380px;flex-shrink:0;display:flex;flex-direction:column;background:#fff;overflow:hidden;box-shadow:2px 0 4px rgba(0,0,0,0.06);z-index:10;}
+#sidebar-header{padding:14px 16px 10px;border-bottom:1px solid #e8eaed;flex-shrink:0;}
+.sh-company{font-family:'Google Sans',sans-serif;font-size:15px;color:#202124;margin-bottom:2px;}
+.sh-tagline{font-size:11px;color:#70757a;font-style:italic;line-height:1.5;}
+.sh-count{font-size:11px;color:#9aa0a6;margin-top:4px;}
+.sh-toggle-row{margin-top:10px;}
+
+/* list */
+#list-panel{overflow-y:auto;flex:1;}
+.place-item{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid #f1f3f4;cursor:pointer;transition:background 0.1s;}
+.place-item:hover{background:#f8f9fa;}
+.place-item.active{background:var(--tint);}
+.place-item.hidden{display:none;}
+.place-icon-wrap{flex-shrink:0;margin-top:2px;}
+.place-info{flex:1;min-width:0;}
+.place-info h3{font-size:14px;font-weight:500;color:#202124;line-height:1.3;margin-bottom:2px;}
+.place-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;}
+.stars{color:#EA4335;font-size:12px;letter-spacing:1px;}
+.star-num{font-size:12px;color:#70757a;}
+.responds-badge{font-size:10px;padding:2px 6px;border-radius:10px;background:#e6f4ea;color:#137333;font-weight:500;}
+.responds-badge.hidden{display:none;}
+.place-address{font-size:12px;color:#70757a;font-style:italic;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.place-snippet{font-size:12px;color:#3c4043;line-height:1.5;}
+.place-chips{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;}
+.chip{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;}
+.chip.cat{background:var(--tint);color:var(--brand3);}
+.chip.waste{background:#e6f4ea;color:#137333;}
+
+/* detail */
+#detail-panel{display:none;flex-direction:column;flex:1;overflow:hidden;}
+#detail-panel.visible{display:flex;}
+#detail-header{padding:12px 16px 0;flex-shrink:0;}
+.back-btn{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--brand1,var(--brand));cursor:pointer;border:none;background:none;padding:0;font-family:'Roboto',sans-serif;}
+.back-btn:hover{text-decoration:underline;}
+#detail-scroll{overflow-y:auto;flex:1;padding:0 16px 24px;}
+.detail-name{font-family:'Google Sans',sans-serif;font-size:22px;font-weight:400;color:#202124;line-height:1.3;margin-bottom:4px;}
+.detail-type{font-size:13px;color:#70757a;margin-bottom:8px;font-style:italic;}
+.detail-stars-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.detail-stars-big{color:#EA4335;font-size:18px;letter-spacing:2px;}
+.detail-star-num-big{font-size:18px;font-weight:500;color:#202124;}
+.detail-rv-count{font-size:13px;color:#70757a;}
+.action-row{display:flex;gap:8px;margin-bottom:14px;}
+.act-btn{display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--tint);border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-family:'Roboto',sans-serif;font-size:11px;color:var(--brand3);font-weight:500;min-width:64px;transition:opacity 0.12s;}
+.act-btn:hover{opacity:0.8;}
+.detail-divider{height:1px;background:#e8eaed;margin:10px 0;}
+.detail-section-label{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:#70757a;margin-bottom:6px;font-weight:500;}
+.detail-review-box{background:#f8f9fa;border-radius:8px;padding:12px 14px;margin-bottom:12px;}
+.review-text{font-size:13px;line-height:1.7;color:#3c4043;}
+.review-sig{font-size:11px;color:#9aa0a6;margin-top:6px;font-style:italic;}
+.responds-box{display:flex;gap:10px;align-items:flex-start;background:#e6f4ea;border-radius:8px;padding:10px 12px;margin-bottom:12px;}
+.responds-box.hidden{display:none;}
+.pin-note-box{display:flex;gap:10px;align-items:flex-start;background:#fef7e0;border-radius:8px;padding:10px 12px;margin-bottom:12px;}
+.pin-note-text{font-size:12px;line-height:1.6;color:#5f4200;}
+.responds-text{font-size:12px;line-height:1.6;color:#0d652d;}
+.tags-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+.tag{font-size:11px;padding:3px 10px;border-radius:16px;border:1px solid #dadce0;color:#5f6368;background:#fff;}
+.cta-footer{margin-top:16px;padding:14px;background:#f1f8f4;border-radius:8px;border-left:3px solid #0db762;}
+.cta-footer p{font-size:12px;line-height:1.6;color:#3c4043;margin-bottom:8px;}
+.cta-footer a{color:#0db762;text-decoration:none;font-weight:500;}
+.cta-footer a:hover{text-decoration:underline;}
+
+#map{flex:1;}
+
+/* map marker / cluster */
+.logo-marker-wrap{border-radius:50%;border:3px solid var(--brand);background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.logo-marker-wrap.active{border-width:4px;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
+.logo-marker-img{width:100%;height:100%;object-fit:contain;padding:3px;}
+.nm-popup{font-family:'Roboto',Arial,sans-serif;min-width:200px;}
+.nm-popup-title{font-family:'Google Sans',sans-serif;font-size:14px;font-weight:500;color:#202124;margin-bottom:2px;line-height:1.3;}
+.nm-popup-address{font-size:11px;color:#70757a;font-style:italic;margin-bottom:4px;}
+.nm-popup-stars{font-size:13px;color:#EA4335;margin-bottom:3px;}
+.nm-popup-tagline{font-size:11px;color:#9aa0a6;font-style:italic;}
+
+/* modal */
+#intro-modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;}
+#intro-modal.gone{display:none;}
+.modal-box{background:#fff;border-radius:16px;max-width:480px;width:100%;padding:28px;box-shadow:0 8px 32px rgba(0,0,0,0.2);}
+.modal-logo-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.modal-logo{height:36px;max-width:100px;object-fit:contain;}
+.modal-x{font-family:'Google Sans',sans-serif;font-size:22px;color:#dadce0;margin:0 4px;}
+.modal-nm-logo{font-family:'Google Sans',sans-serif;font-size:18px;letter-spacing:-0.5px;}
+.modal-title{font-family:'Google Sans',sans-serif;font-size:18px;color:#202124;margin-bottom:8px;line-height:1.3;}
+.modal-tagline{font-size:14px;color:#EA4335;font-style:italic;margin-bottom:14px;}
+.modal-body{font-size:13px;color:#5f6368;line-height:1.7;margin-bottom:20px;}
+.modal-close{width:100%;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:'Google Sans',sans-serif;cursor:pointer;letter-spacing:0.2px;transition:opacity 0.15s;}
+.modal-close:hover{opacity:0.88;}
+
+/* scrollbars */
+#list-panel::-webkit-scrollbar,#detail-scroll::-webkit-scrollbar{width:6px;}
+#list-panel::-webkit-scrollbar-track,#detail-scroll::-webkit-scrollbar-track{background:transparent;}
+#list-panel::-webkit-scrollbar-thumb,#detail-scroll::-webkit-scrollbar-thumb{background:#dadce0;border-radius:3px;}
+
+/* print / PDF export */
+@media print{
+  #intro-modal,#topbar,#map,#sidebar-header .sh-toggle-row,.action-row,.cta-footer{display:none!important;}
+  #app,#content{display:block!important;height:auto!important;overflow:visible!important;}
+  #sidebar{width:100%!important;box-shadow:none!important;overflow:visible!important;}
+  #list-panel,#detail-panel{display:block!important;overflow:visible!important;}
+  .place-item{page-break-inside:avoid;border:1px solid #e0e0e0;border-radius:8px;margin:8px 0;padding:14px;}
+  .place-item.hidden{display:none!important;}
+  #detail-panel.visible{display:none!important;}
+  .chip.cat{border:1px solid currentColor;}
+}
+
+@media(max-width:680px){
+  #sidebar{width:100%;position:absolute;bottom:0;left:0;right:0;z-index:20;height:52vh;box-shadow:0 -2px 8px rgba(0,0,0,0.1);}
+  #content{position:relative;}
+  #map{position:absolute;inset:0;}
+  .sor-badge span:not(.sor-dot){display:none;}
+}
+</style>
+</head>
+<body>
+
+
+<!-- expiry overlay -->
+<div id="expired-screen" style="display:none;position:fixed;inset:0;background:#f8f9fa;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;padding:24px;">
+  <svg width="40" height="40" viewBox="0 0 28 28" fill="none"><path d="M14 2C8.477 2 4 6.477 4 12c0 7.5 10 16 10 16s10-8.5 10-16c0-5.523-4.477-10-10-10z" fill="#dadce0"/><circle cx="14" cy="12" r="4.5" fill="white"/></svg>
+  <div style="font-family:'Google Sans',sans-serif;font-size:20px;color:#202124;">This preview has expired.</div>
+  <div style="font-size:13px;color:#70757a;max-width:360px;line-height:1.6;">This was a client preview generated by NoWhere Maps. The access period has ended.</div>
+  <a href="https://www.schoolofrecycling.com/nowhere-maps" style="font-size:13px;color:#1a73e8;text-decoration:none;font-weight:500;">nowheremaps.org →</a>
+</div>
+
+<!-- preview banner -->
+<div id="preview-banner" style="background:#202124;color:#fff;font-size:11px;text-align:center;padding:6px 16px;position:relative;z-index:10000;letter-spacing:0.3px;">
+  This is a NoWhere Maps client preview — not for redistribution. &nbsp;·&nbsp;
+  <a href="https://www.schoolofrecycling.com/nowhere-maps" style="color:#8ab4f8;text-decoration:none;">nowheremaps.org</a>
+</div>
+
+<!-- intro modal -->
+<div id="intro-modal">
+  <div class="modal-box">
+    <div class="modal-logo-row">
+      <img class="modal-logo" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTY0IiBoZWlnaHQ9IjIwMyIgdmlld0JveD0iMCAwIDU2NCAyMDMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNNTQwLjIxNSA2Mi40MjJDNTI3LjM0MyA3Mi43MTQgNTA1LjI3NyA3NC4wODk0IDQ5Mi4zNDEgNjMuMTEyNEg0OTIuMzM2QzQ4NS43NDggNTcuNTE5NiA0ODEuODAzIDQ4Ljk0MDMgNDgxLjg0NiA0MC4yOTY5QzQ4MS44ODQgMzMuMDA3NCA0ODQuNTkyIDI1Ljk5NjMgNDg3LjgzNSAxOS40NzIyQzQ5MC4xMSAxNC45MDE2IDQ5Mi43MjcgMTAuMzk1MiA0OTYuNDg0IDYuOTM3OEM1MDQuNjQ2IC0wLjU3NjQyIDUxNy40NDIgLTEuODYwOSA1MjcuNjU0IDIuNDc0MjJDNTM3Ljg2NiA2LjgwOTM1IDU0NS40OTIgMTYuMDYzIDU0OS40NTggMjYuNDI0NEM1NTAuOTI0IDMwLjI2MTggNTUxLjk0NyAzNC4zMDI2IDU1Mi4wMjcgMzguNDA3NkM1NTIuMjE0IDQ3LjY1MDUgNTQ3LjQzNSA1Ni42NTI2IDU0MC4yMTUgNjIuNDIyWk0yODguMDU2IDYyLjY0NjhDMjg5LjkzNSA2Mi45MDM3IDI5MS44NCA2Mi45NzMzIDI5My43MjkgNjIuODc3QzMwNy44ODUgNjIuMTgxMiAzMTQuMTc0IDU5LjYwNjkgMzE3LjE1NSA0OS4wMzEzQzMxOC44MzYgNDMuMDY5MiAzMTguNzA3IDM2Ljc0ODUgMzE3IDMwLjc5NzFDMzE1Ljk0NiAyNy4xMTQ5IDMxNC44NDMgMjMuNDU0MSAzMTMuMzkzIDE5LjkzMjVDMzEyLjUyIDE3LjgwMjQgMzA5Ljc0OCAxNS45MTMxIDMwNy40MiAxNS4wMTRDMjk2LjYyIDEwLjg1MDEgMjg2LjEyNCAxMi40MTI5IDI3Ni4xMjcgMTcuODE4NEMyNzQuODA1IDE4LjUzMDMgMjczLjY3IDE5Ljk5NjcgMjcyLjk2OSAyMS4zNzc1QzI2OC43MyAyOS42OTQ1IDI2Ny4zMDEgMzguNDgyNSAyNjkuMjMzIDQ3LjY3MTlDMjcxLjIwMyA1Ny4wNDMzIDI3Ni4yMzkgNjEuMDI1MiAyODguMDUxIDYyLjY0NjhIMjg4LjA1NlpNNTYuOTc3NSA5My45MjkyQzIzLjM1NjIgOTMuOTI5MiAwIDExNy41MTUgMCAxNDcuODcyQzAgMTgzLjgzMiAyOC45NTQ0IDIwMi4yODYgNTcuNjc4NiAyMDIuMjg2Qzg2LjQwMjggMjAyLjI4NiA5OS41MjU5IDE4OC4wMTIgMTA2Ljk3NiAxNzAuNzUyQzEwNy4zNjcgMTY5Ljg0MiAxMDYuOTY1IDE2OC43ODIgMTA2LjA3NyAxNjguMzM4QzEwNS4xNDYgMTY3Ljg3MyAxMDQuMDIyIDE2OC4yNjkgMTAzLjU2MSAxNjkuMjA1Qzk1LjYyNDMgMTg1LjI1NiA4My44NzY2IDE5NS4yOCA2NS4xNSAxOTUuMjhDNDYuNDIzMyAxOTUuMjggMzMuOTQyNCAxNzcuMzgzIDMyLjk2ODQgMTQ3Ljk0N0MzMi45MzA5IDE0Ni44OTMgMzMuNzkyNiAxNDYuMDEgMzQuODUyMyAxNDYuMDFIMTA5Ljk4OVYxNDUuMDczQzEwOS45ODkgMTE2LjExOSA4OS4yMDcyIDkzLjkzNDUgNTYuOTc3NSA5My45MzQ1VjkzLjkyOTJaTTgwLjMzMzYgMTM5LjQ2NEM4MC4zMzM2IDE0MC40OTcgNzkuNDkzMyAxNDEuMzM3IDc4LjQ2MDQgMTQxLjMzN0gzNC44ODQ0QzMzLjgxOTMgMTQxLjMzNyAzMi45NTIzIDE0MC40MzggMzMuMDAwNSAxMzkuMzczQzM0LjA2NTUgMTE2LjkwNSA0MS43NzI0IDk4LjYwMTUgNTYuOTc3NSA5OC42MDE1QzcyLjE4MjUgOTguNjAxNSA4MC4zMzM2IDExOC40NTIgODAuMzMzNiAxMzUuMjYzVjEzOS40NjRaTTIzOS41OTMgMTIxLjcxN1YxODcuMjI1TDIzOS42MDQgMTg3LjIxNEMyMzkuNjA0IDE4Ny44NjIgMjM5Ljk0MSAxODguNDY3IDI0MC40OTcgMTg4LjgwOUwyNTQuMDgxIDE5Ny4xMzdWMTk5LjQ3MUgxOTMuMzYyVjE5Ny4xMzdMMjA2Ljk0NiAxODguODA5QzIwNy41MDIgMTg4LjQ3MiAyMDcuODM5IDE4Ny44NjcgMjA3LjgzOSAxODcuMjE0VjEyNS4yMTFDMjA3LjgzOSAxMTIuODM4IDIwNC44MDUgMTA1LjgzMiAxOTUuMjMgMTA1LjgzMkMxODMuNTMxIDEwNS44MzIgMTcxLjgyNiAxMTUuMDc1IDE2MS42NzggMTI1LjM2MUMxNjEuMzMgMTI1LjcxNSAxNjEuMTM4IDEyNi4xOTEgMTYxLjEzOCAxMjYuNjg5VjE4Ny4yMkMxNjEuMTM4IDE4Ny44NjcgMTYxLjQ3NSAxODguNDcyIDE2Mi4wMzIgMTg4LjgxNUwxNzUuNjE1IDE5Ny4xNDJWMTk5LjQ3NkgxMTQuODk2VjE5Ny4xNDJMMTI4LjQ4IDE4OC44MTVDMTI5LjAzNiAxODguNDc4IDEyOS4zNzQgMTg3Ljg3MyAxMjkuMzc0IDE4Ny4yMlYxMTguMTg0QzEyOS4zNzQgMTE3LjQ4MyAxMjguOTgzIDExNi44NDEgMTI4LjM2MiAxMTYuNTJMMTE1LjM2MiAxMDkuODAzVjEwNy40N0wxNTguNjU0IDkyLjY3MTNDMTU5Ljg2OSA5Mi4yNTM4IDE2MS4xMzIgOTMuMTU4MyAxNjEuMTMyIDk0LjQ0MjhWMTE0Ljk1MkMxNjEuMTMyIDExNi42MzIgMTYzLjE1IDExNy40NTYgMTY0LjMyOCAxMTYuMjY4QzE3NS4wOCAxMDUuNDI1IDE5MC42ODYgOTMuOTI5IDIwOS45MzcgOTMuOTI5QzIzMS44ODYgOTMuOTI5IDIzOS41OTMgMTA2Ljc3NCAyMzkuNTkzIDEyMS43MTdaTTMzMi43OTIgOTkuMDY3NEwzNDEuMTI1IDEwNi4xNTNDMzQxLjczIDEwNi42NjcgMzQxLjk0NCAxMDcuNTAyIDM0MS42NjYgMTA4LjI0MUwzMjEuNTg1IDE2MS40MThMMzE5LjU5NCAxNjcuNjA1QzMxOC45ODkgMTY5LjQ4OSAzMTYuMjU0IDE2OS4yNjQgMzE1Ljk2IDE2Ny4zMTFMMzEzLjkxIDE1My42OUMzMTMuODg5IDE1My41NTEgMzEzLjg1MSAxNTMuNDE3IDMxMy44MDMgMTUzLjI4M0wyOTYuMTY4IDEwOC4yODRDMjk1Ljg2OSAxMDcuNTI0IDI5Ni4wOTkgMTA2LjY1NyAyOTYuNzM2IDEwNi4xNDNMMzA1LjQ3NiA5OS4wNjc0Vjk2LjczMzlIMjQ5LjE5OVY5OS4wNjc0TDI2Mi4yNjkgMTA4LjA4NUMyNjIuNTc5IDEwOC4zIDI2Mi44MTUgMTA4LjU5OSAyNjIuOTQ5IDEwOC45NDdMMjk3Ljc3NCAxOTguMjk0QzI5OC4wNTIgMTk5LjAxMSAyOTguNzQ4IDE5OS40ODcgMjk5LjUxOSAxOTkuNDg3SDMxMS42NTdDMzEyLjQzOSAxOTkuNDg3IDMxMy4xMzQgMTk5LjAwNSAzMTMuNDA3IDE5OC4yNzdMMzQ3LjMwMSAxMDguNTA4QzM0Ny40NDEgMTA4LjE0NCAzNDcuNjg3IDEwNy44MjkgMzQ4LjAxMyAxMDcuNjA5TDM2MC44MjEgOTkuMDY3NFY5Ni43MzM5SDMzMi43OThWOTkuMDY3NEgzMzIuNzkyWk00MTAuMzIyIDk0LjQ0ODdWMTg3LjIyNkg0MTAuMzI3QzQxMC4zMjcgMTg3Ljg3MyA0MTAuNjY0IDE4OC40NzggNDExLjIyMSAxODguODIxTDQyNC44MDQgMTk3LjE0OFYxOTkuNDgySDM2NC4wODZWMTk3LjE0OEwzNzcuNjY5IDE4OC44MjFDMzc4LjIyNiAxODguNDgzIDM3OC41NjMgMTg3Ljg3OSAzNzguNTYzIDE4Ny4yMjZWMTE4LjE5QzM3OC41NjMgMTE3LjQ4OSAzNzguMTcyIDExNi44NDcgMzc3LjU1MiAxMTYuNTI2TDM2NC41NTIgMTA5LjgwOVYxMDcuNDc1TDQwNy44NDQgOTIuNjc3MkM0MDkuMDU5IDkyLjI1OTcgNDEwLjMyMiA5My4xNjQyIDQxMC4zMjIgOTQuNDQ4N1pNNTUwLjE2NCAxODguODIxQzU0OS42MDcgMTg4LjQ3OCA1NDkuMjcgMTg3Ljg3MyA1NDkuMjcgMTg3LjIyNlY5NC40NDg3QzU0OS4yNyA5My4xNjQyIDU0OC4wMDcgOTIuMjU5NyA1NDYuNzkyIDkyLjY3NzJMNTAzLjQ5OSAxMDcuNDc1VjEwOS44MDlMNTE2LjUgMTE2LjUyNkM1MTcuMTIgMTE2Ljg0NyA1MTcuNTExIDExNy40ODkgNTE3LjUxMSAxMTguMTlWMTY5Ljk2QzUxNy41MTEgMTcwLjQ3NCA1MTcuMzAyIDE3MC45NzIgNTE2LjkzMyAxNzEuMzI1QzUwNC45MzQgMTgyLjkxMiA0OTEuNDY4IDE5MC4zNzggNDgzLjg4NCAxOTAuMzc4QzQ3My44NDQgMTkwLjM3OCA0NzAuODA5IDE4NS43MDYgNDcwLjgwOSAxNzMuMzMyVjk0LjQ0ODdDNDcwLjgwOSA5My4xNjQyIDQ2OS41NDYgOTIuMjU5NyA0NjguMzMxIDkyLjY3NzJMNDI1LjAzOSAxMDcuNDc1VjEwOS44MDlMNDM4LjAzOSAxMTYuNTI2QzQzOC42NiAxMTYuODQ3IDQzOS4wNTEgMTE3LjQ4OSA0MzkuMDUxIDExOC4xOVYxNjkuODI2QzQzOS4wNTEgMTkyLjQ4MSA0NDguMTYgMjAyLjI4NiA0NjkuNjQzIDIwMi4yODZDNDg1LjIwNiAyMDIuMjg2IDUwMC43NyAxOTMuODg0IDUxNC4zIDE3OS42NjlDNTE1LjQ2MSAxNzguNDQ4IDUxNy41MTYgMTc5LjI2NyA1MTcuNTE2IDE4MC45NTNWMTk3LjYxNEM1MTcuNTE2IDE5OC42NDcgNTE4LjM1NyAxOTkuNDg3IDUxOS4zOSAxOTkuNDg3SDU2My43NThWMTk3LjE1NEw1NTAuMTc0IDE4OC44MjZMNTUwLjE2NCAxODguODIxWk0zNi44NTgyIDI2LjcxMzRIMTMuNDAwNFY1MC4xNzEySDM2Ljg1ODJWMjYuNzEzNFpNNDEzLjI2IDY0LjcwMThDNDA5LjY5NiA2Ni43MjQ5IDQwNS44NTMgNjcuODY0OSA0MDEuNzc1IDY4LjE5MTNDMzg3LjgxMiA2OS4zMDk5IDM3NC42MjQgNjAuMzAyNSAzNzAuNjA1IDQ2Ljc4MzNDMzY3LjgzOCAzNy40ODE1IDM2OS4wMjYgMjguNzA0MiAzNzQuNzY5IDIwLjc2NzJDMzgxLjkzIDEwLjg4MiAzOTMuNzUyIDcuODg0OTIgNDA0LjgzMSAxMi45OTYxQzQwOC4yMDggMTQuNTUzNSA0MTEuMjU5IDE2LjYxNCA0MTQuMDk1IDE5LjAwMUM0MTguODI2IDIyLjk3NzYgNDIyLjY0MiAyNy42Mjg1IDQyNC43NzMgMzMuNTMxN0M0MjkuMDcgNDUuNDYxNCA0MjQuMjggNTguNDY2NyA0MTMuMjYgNjQuNzAxOFpNMTgwLjUwNyA1OS4xNTcxQzE4MC43MjYgNTkuNTQ3OCAxODEuMDMxIDU5LjcyNDQgMTgxLjQ1OSA1OS44MjYxQzE4NS4zMjQgNjAuNzAzOSAxODkuMjM2IDYxLjE0ODEgMTk0LjU5MyA2MS4xMTZDMjAwLjg2NiA2MS4wMDM2IDIwOC4zNTMgNTkuODE1NCAyMTUuNjI3IDU3LjM0MjhDMjE2LjA5MiA1Ny4xODc2IDIxNi4zNzYgNTYuOTM2IDIxNi41OSA1Ni40OTE4QzIxOS4wMTQgNTEuNDU1NiAyMjAuOTY4IDQ2LjI2NDEgMjIxLjg3OCA0MC43MTk1QzIyMi45NzUgMzQuMDAyNyAyMjIuMTk5IDI3LjQ3MzMgMjE5Ljg5MiAyMS4xMDQ0QzIxOS44MTIgMjAuODc0MiAyMTkuNTcxIDIwLjY0NDEgMjE5LjM1MiAyMC41MzcxQzIxNC42NzQgMTguMjYyNCAyMDkuNzUgMTYuODEyMSAyMDQuNTk2IDE2LjE4NTlDMTk1LjkyIDE1LjEzNjkgMTg3LjQ3NSAxNi4xODU5IDE3OS4yMzMgMTkuMDI3OEMxNzguNjk4IDE5LjIwOTggMTc4LjM5MyAxOS41MDQxIDE3OC4xNTIgMjAuMDE3OUMxNzUuOTU3IDI0LjcwNjMgMTc0LjQyNyAyOS41ODE5IDE3My45NjEgMzQuNzU3M0MxNzMuMzY3IDQxLjQzMTMgMTc0LjU4MiA0Ny43ODQxIDE3Ny41MSA1My43OTk4QzE3OC4wOTEgNTQuOTk0MyAxNzguNzYzIDU2LjE0NTggMTc5LjQzNiA1Ny4yOTg1TDE3OS40MzYgNTcuMjk4NkMxNzkuNzk4IDU3LjkxNzIgMTgwLjE1OSA1OC41MzYzIDE4MC41MDcgNTkuMTYyNVY1OS4xNTcxWk05OS44ODg2IDU1LjQxNjNDOTYuMTk1NyA1NC45NTA2IDkyLjY2ODggNTMuODU4OCA4OS4zMjM4IDUyLjE1MTVMODkuMzI5MSA1Mi4xNDA4Qzg5LjE2ODYgNTIuMDU1MiA4OC45OTczIDUxLjg4MzkgODguOTM4NCA1MS43MTI3Qzg3LjI5IDQ2LjkyOCA4Ni43MzM0IDQyLjAzMDkgODcuNTIwMSAzNi45ODRDODguMTY3NyAzMi44MjAxIDg5LjU3IDI4LjkyMzggOTEuMzA0IDI1LjE0QzkxLjQ1OTIgMjQuODA4MSA5MS42NjI2IDI0LjYyMDggOTEuOTk0NCAyNC41MDMxQzk3LjE5NjYgMjIuNjQ1OSAxMDIuNTU5IDIxLjc1NzUgMTA3LjA1IDIxLjY3MTlDMTEwLjg4NyAyMS42NTA1IDExMy42ODYgMjEuOTgyMyAxMTYuNDUzIDIyLjY0MDZDMTE2Ljc2MyAyMi43MTU1IDExNi45ODMgMjIuODQ5MyAxMTcuMTM4IDIzLjE0MzdDMTE3LjM4NiAyMy42MTIgMTE3LjY0NCAyNC4wNzUxIDExNy45MDIgMjQuNTM4MkMxMTguMzg0IDI1LjQwMzUgMTE4Ljg2NiAyNi4yNjg5IDExOS4yODQgMjcuMTY4NEMxMjEuMzc3IDMxLjY4NTUgMTIyLjI0OSAzNi40NTQxIDEyMS44MjEgNDEuNDY4OUMxMjEuNDk1IDQ1LjM1NDUgMTIwLjM5MiA0OS4wMTUzIDExOC44MjQgNTIuNTM2OUMxMTguNjUzIDUyLjkyMjIgMTE4LjQyOCA1My4xNDE3IDExOC4wNDggNTMuMjgwOEMxMTIuMTQ1IDU1LjQxNjMgMTA2LjA5NyA1Ni4yMDMgOTkuODg4NiA1NS40MTYzWiIgZmlsbD0iIzE4MjFFQyIvPgo8L3N2Zz4K" alt="Enviu logo"/>
+      <span class="modal-x">×</span>
+      <span class="modal-nm-logo"><span style="color:#4285F4;">N</span><span style="color:#EA4335;">o</span><span style="color:#FBBC04;">W</span><span style="color:#4285F4;">h</span><span style="color:#34A853;">e</span><span style="color:#EA4335;">r</span><span style="color:#4285F4;">e</span></span><span class="modal-nm-logo" style="color:#5f6368;font-size:14px;margin-left:2px;">Maps</span>
+    </div>
+    <div class="modal-title">A Enviu edition</div>
+    <div class="modal-tagline">"Markets that didn't exist, now starting to. Scale still pending."</div>
+    <div class="modal-body">
+      This edition was built from Enviu's own sustainability report — mapping the real-world locations behind the numbers. Green markers show where the company has named a concrete response or programme.
+    </div>
+    <button class="modal-close" onclick="document.getElementById('intro-modal').classList.add('gone')">Show me the map</button>
+  </div>
+</div>
+
+<div id="app">
+  <div id="topbar">
+    <a class="logo-wrap" href="../../">
+      <svg width="22" height="22" viewBox="0 0 28 28" fill="none"><path d="M14 2C8.477 2 4 6.477 4 12c0 7.5 10 16 10 16s10-8.5 10-16c0-5.523-4.477-10-10-10z" fill="#EA4335"/><circle cx="14" cy="12" r="4.5" fill="white"/></svg>
+      <div class="logo-text"><span class="n">N</span><span class="o1">o</span><span class="w">W</span><span class="h">h</span><span class="e">e</span><span class="r">r</span><span class="e2">e</span><span style="color:#5f6368;font-size:14px;margin-left:2px;">Maps</span></div>
+    </a>
+    <div class="tb-divider"></div>
+    <div class="company-header">
+      <img class="company-logo" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTY0IiBoZWlnaHQ9IjIwMyIgdmlld0JveD0iMCAwIDU2NCAyMDMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNNTQwLjIxNSA2Mi40MjJDNTI3LjM0MyA3Mi43MTQgNTA1LjI3NyA3NC4wODk0IDQ5Mi4zNDEgNjMuMTEyNEg0OTIuMzM2QzQ4NS43NDggNTcuNTE5NiA0ODEuODAzIDQ4Ljk0MDMgNDgxLjg0NiA0MC4yOTY5QzQ4MS44ODQgMzMuMDA3NCA0ODQuNTkyIDI1Ljk5NjMgNDg3LjgzNSAxOS40NzIyQzQ5MC4xMSAxNC45MDE2IDQ5Mi43MjcgMTAuMzk1MiA0OTYuNDg0IDYuOTM3OEM1MDQuNjQ2IC0wLjU3NjQyIDUxNy40NDIgLTEuODYwOSA1MjcuNjU0IDIuNDc0MjJDNTM3Ljg2NiA2LjgwOTM1IDU0NS40OTIgMTYuMDYzIDU0OS40NTggMjYuNDI0NEM1NTAuOTI0IDMwLjI2MTggNTUxLjk0NyAzNC4zMDI2IDU1Mi4wMjcgMzguNDA3NkM1NTIuMjE0IDQ3LjY1MDUgNTQ3LjQzNSA1Ni42NTI2IDU0MC4yMTUgNjIuNDIyWk0yODguMDU2IDYyLjY0NjhDMjg5LjkzNSA2Mi45MDM3IDI5MS44NCA2Mi45NzMzIDI5My43MjkgNjIuODc3QzMwNy44ODUgNjIuMTgxMiAzMTQuMTc0IDU5LjYwNjkgMzE3LjE1NSA0OS4wMzEzQzMxOC44MzYgNDMuMDY5MiAzMTguNzA3IDM2Ljc0ODUgMzE3IDMwLjc5NzFDMzE1Ljk0NiAyNy4xMTQ5IDMxNC44NDMgMjMuNDU0MSAzMTMuMzkzIDE5LjkzMjVDMzEyLjUyIDE3LjgwMjQgMzA5Ljc0OCAxNS45MTMxIDMwNy40MiAxNS4wMTRDMjk2LjYyIDEwLjg1MDEgMjg2LjEyNCAxMi40MTI5IDI3Ni4xMjcgMTcuODE4NEMyNzQuODA1IDE4LjUzMDMgMjczLjY3IDE5Ljk5NjcgMjcyLjk2OSAyMS4zNzc1QzI2OC43MyAyOS42OTQ1IDI2Ny4zMDEgMzguNDgyNSAyNjkuMjMzIDQ3LjY3MTlDMjcxLjIwMyA1Ny4wNDMzIDI3Ni4yMzkgNjEuMDI1MiAyODguMDUxIDYyLjY0NjhIMjg4LjA1NlpNNTYuOTc3NSA5My45MjkyQzIzLjM1NjIgOTMuOTI5MiAwIDExNy41MTUgMCAxNDcuODcyQzAgMTgzLjgzMiAyOC45NTQ0IDIwMi4yODYgNTcuNjc4NiAyMDIuMjg2Qzg2LjQwMjggMjAyLjI4NiA5OS41MjU5IDE4OC4wMTIgMTA2Ljk3NiAxNzAuNzUyQzEwNy4zNjcgMTY5Ljg0MiAxMDYuOTY1IDE2OC43ODIgMTA2LjA3NyAxNjguMzM4QzEwNS4xNDYgMTY3Ljg3MyAxMDQuMDIyIDE2OC4yNjkgMTAzLjU2MSAxNjkuMjA1Qzk1LjYyNDMgMTg1LjI1NiA4My44NzY2IDE5NS4yOCA2NS4xNSAxOTUuMjhDNDYuNDIzMyAxOTUuMjggMzMuOTQyNCAxNzcuMzgzIDMyLjk2ODQgMTQ3Ljk0N0MzMi45MzA5IDE0Ni44OTMgMzMuNzkyNiAxNDYuMDEgMzQuODUyMyAxNDYuMDFIMTA5Ljk4OVYxNDUuMDczQzEwOS45ODkgMTE2LjExOSA4OS4yMDcyIDkzLjkzNDUgNTYuOTc3NSA5My45MzQ1VjkzLjkyOTJaTTgwLjMzMzYgMTM5LjQ2NEM4MC4zMzM2IDE0MC40OTcgNzkuNDkzMyAxNDEuMzM3IDc4LjQ2MDQgMTQxLjMzN0gzNC44ODQ0QzMzLjgxOTMgMTQxLjMzNyAzMi45NTIzIDE0MC40MzggMzMuMDAwNSAxMzkuMzczQzM0LjA2NTUgMTE2LjkwNSA0MS43NzI0IDk4LjYwMTUgNTYuOTc3NSA5OC42MDE1QzcyLjE4MjUgOTguNjAxNSA4MC4zMzM2IDExOC40NTIgODAuMzMzNiAxMzUuMjYzVjEzOS40NjRaTTIzOS41OTMgMTIxLjcxN1YxODcuMjI1TDIzOS42MDQgMTg3LjIxNEMyMzkuNjA0IDE4Ny44NjIgMjM5Ljk0MSAxODguNDY3IDI0MC40OTcgMTg4LjgwOUwyNTQuMDgxIDE5Ny4xMzdWMTk5LjQ3MUgxOTMuMzYyVjE5Ny4xMzdMMjA2Ljk0NiAxODguODA5QzIwNy41MDIgMTg4LjQ3MiAyMDcuODM5IDE4Ny44NjcgMjA3LjgzOSAxODcuMjE0VjEyNS4yMTFDMjA3LjgzOSAxMTIuODM4IDIwNC44MDUgMTA1LjgzMiAxOTUuMjMgMTA1LjgzMkMxODMuNTMxIDEwNS44MzIgMTcxLjgyNiAxMTUuMDc1IDE2MS42NzggMTI1LjM2MUMxNjEuMzMgMTI1LjcxNSAxNjEuMTM4IDEyNi4xOTEgMTYxLjEzOCAxMjYuNjg5VjE4Ny4yMkMxNjEuMTM4IDE4Ny44NjcgMTYxLjQ3NSAxODguNDcyIDE2Mi4wMzIgMTg4LjgxNUwxNzUuNjE1IDE5Ny4xNDJWMTk5LjQ3NkgxMTQuODk2VjE5Ny4xNDJMMTI4LjQ4IDE4OC44MTVDMTI5LjAzNiAxODguNDc4IDEyOS4zNzQgMTg3Ljg3MyAxMjkuMzc0IDE4Ny4yMlYxMTguMTg0QzEyOS4zNzQgMTE3LjQ4MyAxMjguOTgzIDExNi44NDEgMTI4LjM2MiAxMTYuNTJMMTE1LjM2MiAxMDkuODAzVjEwNy40N0wxNTguNjU0IDkyLjY3MTNDMTU5Ljg2OSA5Mi4yNTM4IDE2MS4xMzIgOTMuMTU4MyAxNjEuMTMyIDk0LjQ0MjhWMTE0Ljk1MkMxNjEuMTMyIDExNi42MzIgMTYzLjE1IDExNy40NTYgMTY0LjMyOCAxMTYuMjY4QzE3NS4wOCAxMDUuNDI1IDE5MC42ODYgOTMuOTI5IDIwOS45MzcgOTMuOTI5QzIzMS44ODYgOTMuOTI5IDIzOS41OTMgMTA2Ljc3NCAyMzkuNTkzIDEyMS43MTdaTTMzMi43OTIgOTkuMDY3NEwzNDEuMTI1IDEwNi4xNTNDMzQxLjczIDEwNi42NjcgMzQxLjk0NCAxMDcuNTAyIDM0MS42NjYgMTA4LjI0MUwzMjEuNTg1IDE2MS40MThMMzE5LjU5NCAxNjcuNjA1QzMxOC45ODkgMTY5LjQ4OSAzMTYuMjU0IDE2OS4yNjQgMzE1Ljk2IDE2Ny4zMTFMMzEzLjkxIDE1My42OUMzMTMuODg5IDE1My41NTEgMzEzLjg1MSAxNTMuNDE3IDMxMy44MDMgMTUzLjI4M0wyOTYuMTY4IDEwOC4yODRDMjk1Ljg2OSAxMDcuNTI0IDI5Ni4wOTkgMTA2LjY1NyAyOTYuNzM2IDEwNi4xNDNMMzA1LjQ3NiA5OS4wNjc0Vjk2LjczMzlIMjQ5LjE5OVY5OS4wNjc0TDI2Mi4yNjkgMTA4LjA4NUMyNjIuNTc5IDEwOC4zIDI2Mi44MTUgMTA4LjU5OSAyNjIuOTQ5IDEwOC45NDdMMjk3Ljc3NCAxOTguMjk0QzI5OC4wNTIgMTk5LjAxMSAyOTguNzQ4IDE5OS40ODcgMjk5LjUxOSAxOTkuNDg3SDMxMS42NTdDMzEyLjQzOSAxOTkuNDg3IDMxMy4xMzQgMTk5LjAwNSAzMTMuNDA3IDE5OC4yNzdMMzQ3LjMwMSAxMDguNTA4QzM0Ny40NDEgMTA4LjE0NCAzNDcuNjg3IDEwNy44MjkgMzQ4LjAxMyAxMDcuNjA5TDM2MC44MjEgOTkuMDY3NFY5Ni43MzM5SDMzMi43OThWOTkuMDY3NEgzMzIuNzkyWk00MTAuMzIyIDk0LjQ0ODdWMTg3LjIyNkg0MTAuMzI3QzQxMC4zMjcgMTg3Ljg3MyA0MTAuNjY0IDE4OC40NzggNDExLjIyMSAxODguODIxTDQyNC44MDQgMTk3LjE0OFYxOTkuNDgySDM2NC4wODZWMTk3LjE0OEwzNzcuNjY5IDE4OC44MjFDMzc4LjIyNiAxODguNDgzIDM3OC41NjMgMTg3Ljg3OSAzNzguNTYzIDE4Ny4yMjZWMTE4LjE5QzM3OC41NjMgMTE3LjQ4OSAzNzguMTcyIDExNi44NDcgMzc3LjU1MiAxMTYuNTI2TDM2NC41NTIgMTA5LjgwOVYxMDcuNDc1TDQwNy44NDQgOTIuNjc3MkM0MDkuMDU5IDkyLjI1OTcgNDEwLjMyMiA5My4xNjQyIDQxMC4zMjIgOTQuNDQ4N1pNNTUwLjE2NCAxODguODIxQzU0OS42MDcgMTg4LjQ3OCA1NDkuMjcgMTg3Ljg3MyA1NDkuMjcgMTg3LjIyNlY5NC40NDg3QzU0OS4yNyA5My4xNjQyIDU0OC4wMDcgOTIuMjU5NyA1NDYuNzkyIDkyLjY3NzJMNTAzLjQ5OSAxMDcuNDc1VjEwOS44MDlMNTE2LjUgMTE2LjUyNkM1MTcuMTIgMTE2Ljg0NyA1MTcuNTExIDExNy40ODkgNTE3LjUxMSAxMTguMTlWMTY5Ljk2QzUxNy41MTEgMTcwLjQ3NCA1MTcuMzAyIDE3MC45NzIgNTE2LjkzMyAxNzEuMzI1QzUwNC45MzQgMTgyLjkxMiA0OTEuNDY4IDE5MC4zNzggNDgzLjg4NCAxOTAuMzc4QzQ3My44NDQgMTkwLjM3OCA0NzAuODA5IDE4NS43MDYgNDcwLjgwOSAxNzMuMzMyVjk0LjQ0ODdDNDcwLjgwOSA5My4xNjQyIDQ2OS41NDYgOTIuMjU5NyA0NjguMzMxIDkyLjY3NzJMNDI1LjAzOSAxMDcuNDc1VjEwOS44MDlMNDM4LjAzOSAxMTYuNTI2QzQzOC42NiAxMTYuODQ3IDQzOS4wNTEgMTE3LjQ4OSA0MzkuMDUxIDExOC4xOVYxNjkuODI2QzQzOS4wNTEgMTkyLjQ4MSA0NDguMTYgMjAyLjI4NiA0NjkuNjQzIDIwMi4yODZDNDg1LjIwNiAyMDIuMjg2IDUwMC43NyAxOTMuODg0IDUxNC4zIDE3OS42NjlDNTE1LjQ2MSAxNzguNDQ4IDUxNy41MTYgMTc5LjI2NyA1MTcuNTE2IDE4MC45NTNWMTk3LjYxNEM1MTcuNTE2IDE5OC42NDcgNTE4LjM1NyAxOTkuNDg3IDUxOS4zOSAxOTkuNDg3SDU2My43NThWMTk3LjE1NEw1NTAuMTc0IDE4OC44MjZMNTUwLjE2NCAxODguODIxWk0zNi44NTgyIDI2LjcxMzRIMTMuNDAwNFY1MC4xNzEySDM2Ljg1ODJWMjYuNzEzNFpNNDEzLjI2IDY0LjcwMThDNDA5LjY5NiA2Ni43MjQ5IDQwNS44NTMgNjcuODY0OSA0MDEuNzc1IDY4LjE5MTNDMzg3LjgxMiA2OS4zMDk5IDM3NC42MjQgNjAuMzAyNSAzNzAuNjA1IDQ2Ljc4MzNDMzY3LjgzOCAzNy40ODE1IDM2OS4wMjYgMjguNzA0MiAzNzQuNzY5IDIwLjc2NzJDMzgxLjkzIDEwLjg4MiAzOTMuNzUyIDcuODg0OTIgNDA0LjgzMSAxMi45OTYxQzQwOC4yMDggMTQuNTUzNSA0MTEuMjU5IDE2LjYxNCA0MTQuMDk1IDE5LjAwMUM0MTguODI2IDIyLjk3NzYgNDIyLjY0MiAyNy42Mjg1IDQyNC43NzMgMzMuNTMxN0M0MjkuMDcgNDUuNDYxNCA0MjQuMjggNTguNDY2NyA0MTMuMjYgNjQuNzAxOFpNMTgwLjUwNyA1OS4xNTcxQzE4MC43MjYgNTkuNTQ3OCAxODEuMDMxIDU5LjcyNDQgMTgxLjQ1OSA1OS44MjYxQzE4NS4zMjQgNjAuNzAzOSAxODkuMjM2IDYxLjE0ODEgMTk0LjU5MyA2MS4xMTZDMjAwLjg2NiA2MS4wMDM2IDIwOC4zNTMgNTkuODE1NCAyMTUuNjI3IDU3LjM0MjhDMjE2LjA5MiA1Ny4xODc2IDIxNi4zNzYgNTYuOTM2IDIxNi41OSA1Ni40OTE4QzIxOS4wMTQgNTEuNDU1NiAyMjAuOTY4IDQ2LjI2NDEgMjIxLjg3OCA0MC43MTk1QzIyMi45NzUgMzQuMDAyNyAyMjIuMTk5IDI3LjQ3MzMgMjE5Ljg5MiAyMS4xMDQ0QzIxOS44MTIgMjAuODc0MiAyMTkuNTcxIDIwLjY0NDEgMjE5LjM1MiAyMC41MzcxQzIxNC42NzQgMTguMjYyNCAyMDkuNzUgMTYuODEyMSAyMDQuNTk2IDE2LjE4NTlDMTk1LjkyIDE1LjEzNjkgMTg3LjQ3NSAxNi4xODU5IDE3OS4yMzMgMTkuMDI3OEMxNzguNjk4IDE5LjIwOTggMTc4LjM5MyAxOS41MDQxIDE3OC4xNTIgMjAuMDE3OUMxNzUuOTU3IDI0LjcwNjMgMTc0LjQyNyAyOS41ODE5IDE3My45NjEgMzQuNzU3M0MxNzMuMzY3IDQxLjQzMTMgMTc0LjU4MiA0Ny43ODQxIDE3Ny41MSA1My43OTk4QzE3OC4wOTEgNTQuOTk0MyAxNzguNzYzIDU2LjE0NTggMTc5LjQzNiA1Ny4yOTg1TDE3OS40MzYgNTcuMjk4NkMxNzkuNzk4IDU3LjkxNzIgMTgwLjE1OSA1OC41MzYzIDE4MC41MDcgNTkuMTYyNVY1OS4xNTcxWk05OS44ODg2IDU1LjQxNjNDOTYuMTk1NyA1NC45NTA2IDkyLjY2ODggNTMuODU4OCA4OS4zMjM4IDUyLjE1MTVMODkuMzI5MSA1Mi4xNDA4Qzg5LjE2ODYgNTIuMDU1MiA4OC45OTczIDUxLjg4MzkgODguOTM4NCA1MS43MTI3Qzg3LjI5IDQ2LjkyOCA4Ni43MzM0IDQyLjAzMDkgODcuNTIwMSAzNi45ODRDODguMTY3NyAzMi44MjAxIDg5LjU3IDI4LjkyMzggOTEuMzA0IDI1LjE0QzkxLjQ1OTIgMjQuODA4MSA5MS42NjI2IDI0LjYyMDggOTEuOTk0NCAyNC41MDMxQzk3LjE5NjYgMjIuNjQ1OSAxMDIuNTU5IDIxLjc1NzUgMTA3LjA1IDIxLjY3MTlDMTEwLjg4NyAyMS42NTA1IDExMy42ODYgMjEuOTgyMyAxMTYuNDUzIDIyLjY0MDZDMTE2Ljc2MyAyMi43MTU1IDExNi45ODMgMjIuODQ5MyAxMTcuMTM4IDIzLjE0MzdDMTE3LjM4NiAyMy42MTIgMTE3LjY0NCAyNC4wNzUxIDExNy45MDIgMjQuNTM4MkMxMTguMzg0IDI1LjQwMzUgMTE4Ljg2NiAyNi4yNjg5IDExOS4yODQgMjcuMTY4NEMxMjEuMzc3IDMxLjY4NTUgMTIyLjI0OSAzNi40NTQxIDEyMS44MjEgNDEuNDY4OUMxMjEuNDk1IDQ1LjM1NDUgMTIwLjM5MiA0OS4wMTUzIDExOC44MjQgNTIuNTM2OUMxMTguNjUzIDUyLjkyMjIgMTE4LjQyOCA1My4xNDE3IDExOC4wNDggNTMuMjgwOEMxMTIuMTQ1IDU1LjQxNjMgMTA2LjA5NyA1Ni4yMDMgOTkuODg4NiA1NS40MTYzWiIgZmlsbD0iIzE4MjFFQyIvPgo8L3N2Zz4K" alt="Enviu"/>
+      <span class="edition-text">A <strong>Enviu</strong> edition</span>
+    </div>
+    <div class="tb-right">
+      <div class="sor-badge">
+        <div class="sor-dot"></div>
+        <span>By </span><a href="https://www.schoolofrecycling.com" target="_blank">School of Recycling</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="content">
+    <div id="sidebar">
+      <div id="sidebar-header">
+        <div class="sh-company">Enviu — NoWhere Maps</div>
+        <div class="sh-tagline">"Markets that didn't exist, now starting to. Scale still pending."</div>
+        <div class="sh-count" id="sh-count"></div>
+        <div class="sh-toggle-row">
+          <div class="toggle-wrap" onclick="toggleFix()">
+            <div class="toggle" id="fix-toggle"><div class="toggle-knob"></div></div>
+            <span id="toggle-label">Show: concrete responses</span>
+          </div>
+        </div>
+      </div>
+      <div id="list-panel"></div>
+      <div id="detail-panel">
+        <div id="detail-header">
+          <button class="back-btn" onclick="showList()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            All locations
+          </button>
+        </div>
+        <div id="detail-scroll">
+          <div class="detail-name" id="d-name"></div>
+          <div class="detail-type" id="d-type"></div>
+          <div class="detail-stars-row">
+            <span class="detail-star-num-big" id="d-num"></span>
+            <span class="detail-stars-big" id="d-stars"></span>
+            <span class="detail-rv-count">1 review — the only one possible</span>
+          </div>
+          <div class="action-row">
+            <button class="act-btn" onclick="sharePinNative()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+              Share pin
+            </button>
+            <button class="act-btn" onclick="exportPDF()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              Download report
+            </button>
+          </div>
+          <div class="detail-divider"></div>
+          <div class="detail-section-label">Review</div>
+          <div class="detail-review-box">
+            <div class="review-text" id="d-review"></div>
+            <div class="review-sig" id="d-sig"></div>
+          </div>
+          <div class="responds-box" id="d-responds-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#34A853" style="flex-shrink:0;margin-top:1px"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            <div>
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:#137333;font-weight:500;margin-bottom:3px;">Company responds</div>
+              <div class="responds-text" id="d-responds-text"></div>
+            </div>
+          </div>
+          <div class="detail-section-label">Why this pin</div>
+          <div class="pin-note-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#F9AB00" style="flex-shrink:0;margin-top:1px"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            <div class="pin-note-text" id="d-pin-note"></div>
+          </div>
+          <div class="detail-section-label">Tags</div>
+          <div class="tags-wrap" id="d-tags"></div>
+          <div class="cta-footer">
+            <p>This is a <strong>NoWhere Maps</strong> preview — generated from Enviu's own sustainability report. The full map covers 40+ global environmental phenomena.</p>
+            <a href="https://www.schoolofrecycling.com" target="_blank">School of Recycling →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="map"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const COMPANY       = "Enviu";
+const LOGO          = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTY0IiBoZWlnaHQ9IjIwMyIgdmlld0JveD0iMCAwIDU2NCAyMDMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNNTQwLjIxNSA2Mi40MjJDNTI3LjM0MyA3Mi43MTQgNTA1LjI3NyA3NC4wODk0IDQ5Mi4zNDEgNjMuMTEyNEg0OTIuMzM2QzQ4NS43NDggNTcuNTE5NiA0ODEuODAzIDQ4Ljk0MDMgNDgxLjg0NiA0MC4yOTY5QzQ4MS44ODQgMzMuMDA3NCA0ODQuNTkyIDI1Ljk5NjMgNDg3LjgzNSAxOS40NzIyQzQ5MC4xMSAxNC45MDE2IDQ5Mi43MjcgMTAuMzk1MiA0OTYuNDg0IDYuOTM3OEM1MDQuNjQ2IC0wLjU3NjQyIDUxNy40NDIgLTEuODYwOSA1MjcuNjU0IDIuNDc0MjJDNTM3Ljg2NiA2LjgwOTM1IDU0NS40OTIgMTYuMDYzIDU0OS40NTggMjYuNDI0NEM1NTAuOTI0IDMwLjI2MTggNTUxLjk0NyAzNC4zMDI2IDU1Mi4wMjcgMzguNDA3NkM1NTIuMjE0IDQ3LjY1MDUgNTQ3LjQzNSA1Ni42NTI2IDU0MC4yMTUgNjIuNDIyWk0yODguMDU2IDYyLjY0NjhDMjg5LjkzNSA2Mi45MDM3IDI5MS44NCA2Mi45NzMzIDI5My43MjkgNjIuODc3QzMwNy44ODUgNjIuMTgxMiAzMTQuMTc0IDU5LjYwNjkgMzE3LjE1NSA0OS4wMzEzQzMxOC44MzYgNDMuMDY5MiAzMTguNzA3IDM2Ljc0ODUgMzE3IDMwLjc5NzFDMzE1Ljk0NiAyNy4xMTQ5IDMxNC44NDMgMjMuNDU0MSAzMTMuMzkzIDE5LjkzMjVDMzEyLjUyIDE3LjgwMjQgMzA5Ljc0OCAxNS45MTMxIDMwNy40MiAxNS4wMTRDMjk2LjYyIDEwLjg1MDEgMjg2LjEyNCAxMi40MTI5IDI3Ni4xMjcgMTcuODE4NEMyNzQuODA1IDE4LjUzMDMgMjczLjY3IDE5Ljk5NjcgMjcyLjk2OSAyMS4zNzc1QzI2OC43MyAyOS42OTQ1IDI2Ny4zMDEgMzguNDgyNSAyNjkuMjMzIDQ3LjY3MTlDMjcxLjIwMyA1Ny4wNDMzIDI3Ni4yMzkgNjEuMDI1MiAyODguMDUxIDYyLjY0NjhIMjg4LjA1NlpNNTYuOTc3NSA5My45MjkyQzIzLjM1NjIgOTMuOTI5MiAwIDExNy41MTUgMCAxNDcuODcyQzAgMTgzLjgzMiAyOC45NTQ0IDIwMi4yODYgNTcuNjc4NiAyMDIuMjg2Qzg2LjQwMjggMjAyLjI4NiA5OS41MjU5IDE4OC4wMTIgMTA2Ljk3NiAxNzAuNzUyQzEwNy4zNjcgMTY5Ljg0MiAxMDYuOTY1IDE2OC43ODIgMTA2LjA3NyAxNjguMzM4QzEwNS4xNDYgMTY3Ljg3MyAxMDQuMDIyIDE2OC4yNjkgMTAzLjU2MSAxNjkuMjA1Qzk1LjYyNDMgMTg1LjI1NiA4My44NzY2IDE5NS4yOCA2NS4xNSAxOTUuMjhDNDYuNDIzMyAxOTUuMjggMzMuOTQyNCAxNzcuMzgzIDMyLjk2ODQgMTQ3Ljk0N0MzMi45MzA5IDE0Ni44OTMgMzMuNzkyNiAxNDYuMDEgMzQuODUyMyAxNDYuMDFIMTA5Ljk4OVYxNDUuMDczQzEwOS45ODkgMTE2LjExOSA4OS4yMDcyIDkzLjkzNDUgNTYuOTc3NSA5My45MzQ1VjkzLjkyOTJaTTgwLjMzMzYgMTM5LjQ2NEM4MC4zMzM2IDE0MC40OTcgNzkuNDkzMyAxNDEuMzM3IDc4LjQ2MDQgMTQxLjMzN0gzNC44ODQ0QzMzLjgxOTMgMTQxLjMzNyAzMi45NTIzIDE0MC40MzggMzMuMDAwNSAxMzkuMzczQzM0LjA2NTUgMTE2LjkwNSA0MS43NzI0IDk4LjYwMTUgNTYuOTc3NSA5OC42MDE1QzcyLjE4MjUgOTguNjAxNSA4MC4zMzM2IDExOC40NTIgODAuMzMzNiAxMzUuMjYzVjEzOS40NjRaTTIzOS41OTMgMTIxLjcxN1YxODcuMjI1TDIzOS42MDQgMTg3LjIxNEMyMzkuNjA0IDE4Ny44NjIgMjM5Ljk0MSAxODguNDY3IDI0MC40OTcgMTg4LjgwOUwyNTQuMDgxIDE5Ny4xMzdWMTk5LjQ3MUgxOTMuMzYyVjE5Ny4xMzdMMjA2Ljk0NiAxODguODA5QzIwNy41MDIgMTg4LjQ3MiAyMDcuODM5IDE4Ny44NjcgMjA3LjgzOSAxODcuMjE0VjEyNS4yMTFDMjA3LjgzOSAxMTIuODM4IDIwNC44MDUgMTA1LjgzMiAxOTUuMjMgMTA1LjgzMkMxODMuNTMxIDEwNS44MzIgMTcxLjgyNiAxMTUuMDc1IDE2MS42NzggMTI1LjM2MUMxNjEuMzMgMTI1LjcxNSAxNjEuMTM4IDEyNi4xOTEgMTYxLjEzOCAxMjYuNjg5VjE4Ny4yMkMxNjEuMTM4IDE4Ny44NjcgMTYxLjQ3NSAxODguNDcyIDE2Mi4wMzIgMTg4LjgxNUwxNzUuNjE1IDE5Ny4xNDJWMTk5LjQ3NkgxMTQuODk2VjE5Ny4xNDJMMTI4LjQ4IDE4OC44MTVDMTI5LjAzNiAxODguNDc4IDEyOS4zNzQgMTg3Ljg3MyAxMjkuMzc0IDE4Ny4yMlYxMTguMTg0QzEyOS4zNzQgMTE3LjQ4MyAxMjguOTgzIDExNi44NDEgMTI4LjM2MiAxMTYuNTJMMTE1LjM2MiAxMDkuODAzVjEwNy40N0wxNTguNjU0IDkyLjY3MTNDMTU5Ljg2OSA5Mi4yNTM4IDE2MS4xMzIgOTMuMTU4MyAxNjEuMTMyIDk0LjQ0MjhWMTE0Ljk1MkMxNjEuMTMyIDExNi42MzIgMTYzLjE1IDExNy40NTYgMTY0LjMyOCAxMTYuMjY4QzE3NS4wOCAxMDUuNDI1IDE5MC42ODYgOTMuOTI5IDIwOS45MzcgOTMuOTI5QzIzMS44ODYgOTMuOTI5IDIzOS41OTMgMTA2Ljc3NCAyMzkuNTkzIDEyMS43MTdaTTMzMi43OTIgOTkuMDY3NEwzNDEuMTI1IDEwNi4xNTNDMzQxLjczIDEwNi42NjcgMzQxLjk0NCAxMDcuNTAyIDM0MS42NjYgMTA4LjI0MUwzMjEuNTg1IDE2MS40MThMMzE5LjU5NCAxNjcuNjA1QzMxOC45ODkgMTY5LjQ4OSAzMTYuMjU0IDE2OS4yNjQgMzE1Ljk2IDE2Ny4zMTFMMzEzLjkxIDE1My42OUMzMTMuODg5IDE1My41NTEgMzEzLjg1MSAxNTMuNDE3IDMxMy44MDMgMTUzLjI4M0wyOTYuMTY4IDEwOC4yODRDMjk1Ljg2OSAxMDcuNTI0IDI5Ni4wOTkgMTA2LjY1NyAyOTYuNzM2IDEwNi4xNDNMMzA1LjQ3NiA5OS4wNjc0Vjk2LjczMzlIMjQ5LjE5OVY5OS4wNjc0TDI2Mi4yNjkgMTA4LjA4NUMyNjIuNTc5IDEwOC4zIDI2Mi44MTUgMTA4LjU5OSAyNjIuOTQ5IDEwOC45NDdMMjk3Ljc3NCAxOTguMjk0QzI5OC4wNTIgMTk5LjAxMSAyOTguNzQ4IDE5OS40ODcgMjk5LjUxOSAxOTkuNDg3SDMxMS42NTdDMzEyLjQzOSAxOTkuNDg3IDMxMy4xMzQgMTk5LjAwNSAzMTMuNDA3IDE5OC4yNzdMMzQ3LjMwMSAxMDguNTA4QzM0Ny40NDEgMTA4LjE0NCAzNDcuNjg3IDEwNy44MjkgMzQ4LjAxMyAxMDcuNjA5TDM2MC44MjEgOTkuMDY3NFY5Ni43MzM5SDMzMi43OThWOTkuMDY3NEgzMzIuNzkyWk00MTAuMzIyIDk0LjQ0ODdWMTg3LjIyNkg0MTAuMzI3QzQxMC4zMjcgMTg3Ljg3MyA0MTAuNjY0IDE4OC40NzggNDExLjIyMSAxODguODIxTDQyNC44MDQgMTk3LjE0OFYxOTkuNDgySDM2NC4wODZWMTk3LjE0OEwzNzcuNjY5IDE4OC44MjFDMzc4LjIyNiAxODguNDgzIDM3OC41NjMgMTg3Ljg3OSAzNzguNTYzIDE4Ny4yMjZWMTE4LjE5QzM3OC41NjMgMTE3LjQ4OSAzNzguMTcyIDExNi44NDcgMzc3LjU1MiAxMTYuNTI2TDM2NC41NTIgMTA5LjgwOVYxMDcuNDc1TDQwNy44NDQgOTIuNjc3MkM0MDkuMDU5IDkyLjI1OTcgNDEwLjMyMiA5My4xNjQyIDQxMC4zMjIgOTQuNDQ4N1pNNTUwLjE2NCAxODguODIxQzU0OS42MDcgMTg4LjQ3OCA1NDkuMjcgMTg3Ljg3MyA1NDkuMjcgMTg3LjIyNlY5NC40NDg3QzU0OS4yNyA5My4xNjQyIDU0OC4wMDcgOTIuMjU5NyA1NDYuNzkyIDkyLjY3NzJMNTAzLjQ5OSAxMDcuNDc1VjEwOS44MDlMNTE2LjUgMTE2LjUyNkM1MTcuMTIgMTE2Ljg0NyA1MTcuNTExIDExNy40ODkgNTE3LjUxMSAxMTguMTlWMTY5Ljk2QzUxNy41MTEgMTcwLjQ3NCA1MTcuMzAyIDE3MC45NzIgNTE2LjkzMyAxNzEuMzI1QzUwNC45MzQgMTgyLjkxMiA0OTEuNDY4IDE5MC4zNzggNDgzLjg4NCAxOTAuMzc4QzQ3My44NDQgMTkwLjM3OCA0NzAuODA5IDE4NS43MDYgNDcwLjgwOSAxNzMuMzMyVjk0LjQ0ODdDNDcwLjgwOSA5My4xNjQyIDQ2OS41NDYgOTIuMjU5NyA0NjguMzMxIDkyLjY3NzJMNDI1LjAzOSAxMDcuNDc1VjEwOS44MDlMNDM4LjAzOSAxMTYuNTI2QzQzOC42NiAxMTYuODQ3IDQzOS4wNTEgMTE3LjQ4OSA0MzkuMDUxIDExOC4xOVYxNjkuODI2QzQzOS4wNTEgMTkyLjQ4MSA0NDguMTYgMjAyLjI4NiA0NjkuNjQzIDIwMi4yODZDNDg1LjIwNiAyMDIuMjg2IDUwMC43NyAxOTMuODg0IDUxNC4zIDE3OS42NjlDNTE1LjQ2MSAxNzguNDQ4IDUxNy41MTYgMTc5LjI2NyA1MTcuNTE2IDE4MC45NTNWMTk3LjYxNEM1MTcuNTE2IDE5OC42NDcgNTE4LjM1NyAxOTkuNDg3IDUxOS4zOSAxOTkuNDg3SDU2My43NThWMTk3LjE1NEw1NTAuMTc0IDE4OC44MjZMNTUwLjE2NCAxODguODIxWk0zNi44NTgyIDI2LjcxMzRIMTMuNDAwNFY1MC4xNzEySDM2Ljg1ODJWMjYuNzEzNFpNNDEzLjI2IDY0LjcwMThDNDA5LjY5NiA2Ni43MjQ5IDQwNS44NTMgNjcuODY0OSA0MDEuNzc1IDY4LjE5MTNDMzg3LjgxMiA2OS4zMDk5IDM3NC42MjQgNjAuMzAyNSAzNzAuNjA1IDQ2Ljc4MzNDMzY3LjgzOCAzNy40ODE1IDM2OS4wMjYgMjguNzA0MiAzNzQuNzY5IDIwLjc2NzJDMzgxLjkzIDEwLjg4MiAzOTMuNzUyIDcuODg0OTIgNDA0LjgzMSAxMi45OTYxQzQwOC4yMDggMTQuNTUzNSA0MTEuMjU5IDE2LjYxNCA0MTQuMDk1IDE5LjAwMUM0MTguODI2IDIyLjk3NzYgNDIyLjY0MiAyNy42Mjg1IDQyNC43NzMgMzMuNTMxN0M0MjkuMDcgNDUuNDYxNCA0MjQuMjggNTguNDY2NyA0MTMuMjYgNjQuNzAxOFpNMTgwLjUwNyA1OS4xNTcxQzE4MC43MjYgNTkuNTQ3OCAxODEuMDMxIDU5LjcyNDQgMTgxLjQ1OSA1OS44MjYxQzE4NS4zMjQgNjAuNzAzOSAxODkuMjM2IDYxLjE0ODEgMTk0LjU5MyA2MS4xMTZDMjAwLjg2NiA2MS4wMDM2IDIwOC4zNTMgNTkuODE1NCAyMTUuNjI3IDU3LjM0MjhDMjE2LjA5MiA1Ny4xODc2IDIxNi4zNzYgNTYuOTM2IDIxNi41OSA1Ni40OTE4QzIxOS4wMTQgNTEuNDU1NiAyMjAuOTY4IDQ2LjI2NDEgMjIxLjg3OCA0MC43MTk1QzIyMi45NzUgMzQuMDAyNyAyMjIuMTk5IDI3LjQ3MzMgMjE5Ljg5MiAyMS4xMDQ0QzIxOS44MTIgMjAuODc0MiAyMTkuNTcxIDIwLjY0NDEgMjE5LjM1MiAyMC41MzcxQzIxNC42NzQgMTguMjYyNCAyMDkuNzUgMTYuODEyMSAyMDQuNTk2IDE2LjE4NTlDMTk1LjkyIDE1LjEzNjkgMTg3LjQ3NSAxNi4xODU5IDE3OS4yMzMgMTkuMDI3OEMxNzguNjk4IDE5LjIwOTggMTc4LjM5MyAxOS41MDQxIDE3OC4xNTIgMjAuMDE3OUMxNzUuOTU3IDI0LjcwNjMgMTc0LjQyNyAyOS41ODE5IDE3My45NjEgMzQuNzU3M0MxNzMuMzY3IDQxLjQzMTMgMTc0LjU4MiA0Ny43ODQxIDE3Ny41MSA1My43OTk4QzE3OC4wOTEgNTQuOTk0MyAxNzguNzYzIDU2LjE0NTggMTc5LjQzNiA1Ny4yOTg1TDE3OS40MzYgNTcuMjk4NkMxNzkuNzk4IDU3LjkxNzIgMTgwLjE1OSA1OC41MzYzIDE4MC41MDcgNTkuMTYyNVY1OS4xNTcxWk05OS44ODg2IDU1LjQxNjNDOTYuMTk1NyA1NC45NTA2IDkyLjY2ODggNTMuODU4OCA4OS4zMjM4IDUyLjE1MTVMODkuMzI5MSA1Mi4xNDA4Qzg5LjE2ODYgNTIuMDU1MiA4OC45OTczIDUxLjg4MzkgODguOTM4NCA1MS43MTI3Qzg3LjI5IDQ2LjkyOCA4Ni43MzM0IDQyLjAzMDkgODcuNTIwMSAzNi45ODRDODguMTY3NyAzMi44MjAxIDg5LjU3IDI4LjkyMzggOTEuMzA0IDI1LjE0QzkxLjQ1OTIgMjQuODA4MSA5MS42NjI2IDI0LjYyMDggOTEuOTk0NCAyNC41MDMxQzk3LjE5NjYgMjIuNjQ1OSAxMDIuNTU5IDIxLjc1NzUgMTA3LjA1IDIxLjY3MTlDMTEwLjg4NyAyMS42NTA1IDExMy42ODYgMjEuOTgyMyAxMTYuNDUzIDIyLjY0MDZDMTE2Ljc2MyAyMi43MTU1IDExNi45ODMgMjIuODQ5MyAxMTcuMTM4IDIzLjE0MzdDMTE3LjM4NiAyMy42MTIgMTE3LjY0NCAyNC4wNzUxIDExNy45MDIgMjQuNTM4MkMxMTguMzg0IDI1LjQwMzUgMTE4Ljg2NiAyNi4yNjg5IDExOS4yODQgMjcuMTY4NEMxMjEuMzc3IDMxLjY4NTUgMTIyLjI0OSAzNi40NTQxIDEyMS44MjEgNDEuNDY4OUMxMjEuNDk1IDQ1LjM1NDUgMTIwLjM5MiA0OS4wMTUzIDExOC44MjQgNTIuNTM2OUMxMTguNjUzIDUyLjkyMjIgMTE4LjQyOCA1My4xNDE3IDExOC4wNDggNTMuMjgwOEMxMTIuMTQ1IDU1LjQxNjMgMTA2LjA5NyA1Ni4yMDMgOTkuODg4NiA1NS40MTYzWiIgZmlsbD0iIzE4MjFFQyIvPgo8L3N2Zz4K";
+const BRAND         = "#0006b8";
+const BRAND2        = "#1e2f42";
+const BRAND3        = "#e8f38d";
+const BRAND_TINT    = "rgba(232,243,141,0.13)";
+const TAGLINE       = "Markets that didn't exist, now starting to. Scale still pending.";
+const CUSTOM_CAT    = "Venture building & systems change";
+const HQ            = [51.9225,4.47917];
+const PINS          = [{"name":"Alner refill network","type":"Reusable packaging venture · Indonesia","address":"No fixed address · Jakarta and surrounding warungs · started 2019","stars":2,"category":"Venture building & systems change","wasteType":"Plastic","reviewShort":"Sachets are out, refills are in. For 1,470 warungs so far.","reviewFull":"Alner replaces single-use sachets with refillable packaging across Indonesian micro-retailers, with 30% customer growth in 2025 and 750 new warungs joining. In 2025 it avoided 15.5 tonnes of single-use packaging and 58.5 tonnes of CO2. Against a national sachet economy of billions, the network is real but still early. The minimarket Zero opened in Jakarta in 2026.","sig":"— Posted from: the refill counter at a warung that used to sell sachets","pinNote":"Alner originated in Jakarta in 2019 as Enviu's flagship Zero Waste venture in Indonesia, where single-use sachet packaging dominates household retail.","lat":-6.2088,"lng":106.8456,"tags":["reuse","sachets","Indonesia"],"companyResponds":true,"respondsNote":"Alner is making refill and reuse systems part of everyday shopping, with 750 new warungs in 2025 and the Zero zero-waste minimarket launched in Jakarta in early 2026."},{"name":"AGUNI reuse association","type":"Industry standards body · Indonesia","address":"No fixed address · national value chain · founded 2025","stars":2,"category":"Policy & greenwashing","wasteType":"Plastic","reviewShort":"An association to make reuse a standard. Founded this year.","reviewFull":"Co-founded with Dietplastik in 2025, AGUNI is described as Indonesia's first association dedicated to reuse as a primary solution to plastic pollution, coordinating 1,000+ refill and reuse points. It develops shared standards and advises stakeholders. The structural barrier it targets — missing reuse standards — is named honestly. Whether shared standards translate into a national system remains the next step.","sig":"— Posted from: a working group drafting a standard that does not exist yet","pinNote":"AGUNI / Indonesia Reuse Association was established in Indonesia in 2025; pinned to Jakarta as the centre of national policy coordination.","lat":-6.1751,"lng":106.865,"tags":["standards","reuse","association"],"companyResponds":true,"respondsNote":"Enviu co-founded AGUNI to develop shared standards, advise stakeholders, and enable reuse to scale across the Indonesian industry."},{"name":"Herbruikbare Wijnfles pilot","type":"Reusable glass system · Netherlands","address":"No fixed address · 81 hospitality outlets · pilot since 2023","stars":2,"category":"Ocean & water","wasteType":"Mixed","reviewShort":"400 million bottles discarded yearly. The pilot avoided 39,000.","reviewFull":"The Netherlands discards more than 400 million wine bottles a year; Enviu's universal reusable bottle pilot ran across 81 outlets and avoided 39,000 single-use bottles (14,820 kg glass) with 32.5–83% CO2 reduction per bottle. An independent foundation now owns the bottle pool and a parliamentary motion followed. The gap between 39,000 and 400 million is the honest part.","sig":"— Posted from: the third page of a parliamentary motion","pinNote":"Pilot ran across Dutch restaurants, cafes, supermarkets and event venues with support from the Province of South Holland; pinned to The Hague as seat of the supporting province and parliament.","lat":52.0705,"lng":4.3007,"tags":["glass","wine","reuse"],"companyResponds":true,"respondsNote":"Enviu piloted a universal reusable wine bottle system with PAKT and Walraven Sax, established an independent foundation, and the work fed into the Interreg-funded Interpool project across four countries."},{"name":"Saahas sorting facility, Gottigere","type":"Textile waste sorting · Bengaluru","address":"No fixed address · Gottigere, Bengaluru · informal sector","stars":2,"category":"Venture building & systems change","wasteType":"Textile","reviewShort":"Invisible work, now with a contract and a guaranteed salary.","reviewFull":"At Saahas Zero Waste facilities, sorting workers now hold formal jobs with monthly salaries of €152–€233, rising to €284 with living-wage brands. Nearly 100 aggregators comply with formal standards including bans on child labour. Zarina, 19, earns €152 with paid leave and structured hours. The wage floor is benchmarked to city minimums — a start, not a destination.","sig":"— Posted from: a sorting table where the job now has a payslip","pinNote":"Gottigere, Bengaluru, is the location of the Saahas facility named in the report where worker Zarina is employed under Enviu's Closing the Loop program.","lat":12.8674,"lng":77.5947,"tags":["livingwage","textilewaste","India"],"companyResponds":true,"respondsNote":"Through the Closing the Loop program, Second Spin and The Good Felt work with Saahas to give sorting workers formal jobs, guaranteed salaries and bans on child labour across the supplier network."},{"name":"Gurgaon textile waste corridor","type":"Program expansion · North India","address":"No fixed address · Gurgaon, Haryana · expanded 2025","stars":2,"category":"Soil & land","wasteType":"Textile","reviewShort":"200 tons of textile waste diverted. In a new city.","reviewFull":"The Closing the Loop program expanded into Gurgaon, diverting 200 tons of textile waste from the urban system. The waste pickers who form the backbone of these systems have long operated without recognition or stable income. Expansion is documented; whether formalization keeps pace with volume is the open question across both cities.","sig":"— Posted from: a new city added to the program map","pinNote":"Gurgaon, Haryana, is named in the report as the 2025 geographic expansion of the Closing the Loop textile program.","lat":28.4595,"lng":77.0266,"tags":["textilewaste","Gurgaon","expansion"],"companyResponds":true,"respondsNote":"Enviu's Closing the Loop program expanded into Gurgaon, diverting 200 tons of textile waste."},{"name":"Marine Metals ship dismantling","type":"Steel recycling venture · Netherlands","address":"No fixed address · Dutch ports · catalytic capital case","stars":2,"category":"Atmosphere","wasteType":"E-waste","reviewShort":"End-of-life ships, dismantled safely instead of beached.","reviewFull":"Marine Metals is building a system to dismantle ships safely and recycle materials to high-grade steel, avoiding the unsafe beaching practices common in the industry. Steel recycling saves over 70% of the energy of virgin production. For every €1 of early funding it mobilized €8 in additional capital, 63% from investment. A model proven, not yet an industry rebuilt.","sig":"— Posted from: a hull that did not end up on a beach in South Asia","pinNote":"Marine Metals is based in the Netherlands; pinned to Rotterdam as the country's principal port and shipbreaking-relevant maritime hub.","lat":51.9496,"lng":4.1392,"tags":["shipbreaking","steelrecycling","catalyticcapital"],"companyResponds":true,"respondsNote":"Marine Metals is building a system where ships are dismantled safely and materials recycled to high-grade steel, mobilizing €8 of capital for every €1 of early funding."},{"name":"Bali single-use plastic pilot","type":"Hospitality plastic reduction · Indonesia","address":"No fixed address · five hotels, Bali · 3-month pilot","stars":1,"category":"Ocean & water","wasteType":"Plastic","reviewShort":"1.6 million tonnes of island waste. A five-hotel pilot.","reviewFull":"Bali produces more than 1.6 million tonnes of waste annually, including roughly 330,000 tonnes of plastic pollution. Destination Zero Waste Bali ran a 3-month pilot across five hotels, preventing 2,675 single-use plastic items with 76.6% average waste reduction across nine categories. The pilot worked; it also sits against a number with six zeroes. The KemBali venture concept follows.","sig":"— Posted from: a hotel minibar in a province drowning in its own waste","pinNote":"Bali, Indonesia, is named in the report as the site of the Destination Zero Waste Bali pilot; the island's waste figures are documented industry context.","lat":-8.4095,"lng":115.1889,"tags":["tourism","plastic","Bali"],"companyResponds":true,"respondsNote":"Through Destination Zero Waste Bali, Enviu Indonesia piloted single-use plastic reduction across five hotels, leading to the KemBali venture concept for reusable hotel packaging."},{"name":"Dutch nitrogen surplus","type":"Agricultural system context · Netherlands","address":"No fixed address · Dutch farmland · structural baseline","stars":1,"category":"Soil & land","wasteType":"Organic","reviewShort":"Second-largest agri exporter. Highest nitrogen surplus in the EU.","reviewFull":"The report names it plainly: the Netherlands generated €128.9 billion in agricultural exports in 2024 but carries the EU's highest nitrogen surplus per hectare and a biodiversity decline to roughly 15% of baseline. Enviu connects Kenyan regenerative ventures to Dutch buyers to demonstrate alternative sourcing. The demonstration is real; the surplus it stands against is national in scale.","sig":"— Posted from: a field producing 15% of the biodiversity it once held","pinNote":"Pinned to the Gelderse Vallei, a region central to Dutch intensive agriculture and nitrogen policy disputes; figures cited verbatim from the report.","lat":52.1326,"lng":5.5,"tags":["nitrogen","biodiversity","regenerative"],"companyResponds":true,"respondsNote":"Enviu is connecting its Kenyan Agrifood ventures with Dutch and European buyers to demonstrate how regenerative sourcing can work at scale."},{"name":"SokoFresh cold storage, Makueni","type":"Post-harvest food loss · Kenya","address":"No fixed address · Makueni County · scaling 2025","stars":3,"category":"Venture building & systems change","wasteType":"Organic","reviewShort":"8,667 tonnes of food saved from rotting. In one year.","reviewFull":"SokoFresh worked with 19,000+ farmers offering rentable cold storage, and across the Agrifood ventures 8,667 tonnes of food loss was prevented in 2025 with an average 30% increase in farmer income. Women now make up 55% of engaged farmers, up 88%. €4.7 million reached smallholders directly. Conservative attribution means this likely understates rather than overstates. Documented, traceable, growing.","sig":"— Posted from: a cold storage unit where the mangoes made it to market","pinNote":"Makueni County, Kenya, where SokoFresh operates with support from the Makueni County Government, is a core region of Enviu's Post-harvest Food Loss program.","lat":-1.8038,"lng":37.6244,"tags":["foodloss","coldchain","Kenya"],"companyResponds":true,"respondsNote":"SokoFresh provides accessible cold storage rental to 19,000+ farmers, contributing to 8,667 tonnes of food loss prevented in 2025 with an average 30% income increase."},{"name":"Enviu impact attribution","type":"Measurement & transparency · Global","address":"No fixed address · across all ventures · methodology note","stars":2,"category":"Corporate","wasteType":"Mixed","reviewShort":"The numbers are conservative. The report says so itself.","reviewFull":"Enviu states that its figures reflect only what can be directly traced and verified, that conservative proxies were used, and that full SROI attribution adjustments have not yet been applied. Measurable impact is concentrated in the most mature ventures, while advocacy and ecosystem work only surfaces over years. Naming the limits of your own scoreboard is the rarest line in any impact report.","sig":"— Posted from: the Considerations & Limitations page nobody usually reads","pinNote":"Pinned to Enviu HQ in Rotterdam; this pin reflects the report's own Considerations & Limitations section on measurement and attribution.","lat":51.9225,"lng":4.47917,"tags":["measurement","attribution","transparency"],"companyResponds":true,"respondsNote":"Enviu states figures reflect only directly traceable impact, used conservative assumptions and proxies, and have not yet applied full SROI attribution adjustments."}];
+const SLUG          = "enviu";
+const TOGGLE_ON_LABEL  = "Showing: concrete responses";
+const TOGGLE_OFF_LABEL = "Show: concrete responses";
+const EXPIRES = "2026-06-27";
+
+
+if (new Date() > new Date(EXPIRES + 'T23:59:59')) {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('expired-screen').style.display = 'flex';
+    document.getElementById('preview-banner') && (document.getElementById('preview-banner').style.display = 'none');
+  });
+}
+
+let map, clusterGroup, markers = [], activeIdx = -1, fixingMode = false;
+
+function starStr(n){ return '★'.repeat(n)+'☆'.repeat(5-n); }
+
+function mkMarkerHTML(active) {
+  const sz = active ? 42 : 34;
+  return `<div class="logo-marker-wrap ${active?'active':''}" style="width:${sz}px;height:${sz}px;border-color:${BRAND2};">
+    <img class="logo-marker-img" src="${LOGO}" alt="${COMPANY}"/>
+  </div>`;
+}
+
+function mkIcon(active) {
+  const sz = active ? 42 : 34;
+  return L.divIcon({ className:'', html: mkMarkerHTML(active),
+    iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], popupAnchor:[0,-sz/2-4] });
+}
+
+function mkRespondIcon(active) {
+  const sz = active ? 42 : 34;
+  return L.divIcon({ className:'', iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], popupAnchor:[0,-sz/2-4],
+    html:`<div style="position:relative;width:${sz}px;height:${sz}px;">
+      <div class="logo-marker-wrap ${active?'active':''}" style="width:${sz}px;height:${sz}px;border-color:#34A853;">
+        <img class="logo-marker-img" src="${LOGO}" alt="${COMPANY}"/>
+      </div>
+      <div style="position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:#34A853;border:2px solid #fff;display:flex;align-items:center;justify-content:center;">
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="#fff"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      </div>
+    </div>`
+  });
+}
+
+function getIcon(i, active) {
+  const p = PINS[i];
+  return (fixingMode && p.companyResponds) ? mkRespondIcon(active) : mkIcon(active);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initMap();
+  renderList();
+  document.getElementById('sh-count').textContent = PINS.length + ' locations';
+  /* fly to HQ region */
+  setTimeout(() => {
+    map.flyTo(HQ, 5, { duration: 2.5, easeLinearity: 0.3 });
+  }, 600);
+});
+
+function initMap() {
+  map = L.map('map', { zoomControl:true, scrollWheelZoom:true }).setView([20, 10], 2);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 18
+  }).addTo(map);
+
+  clusterGroup = L.markerClusterGroup({
+    maxClusterRadius: 60, spiderfyOnMaxZoom: true, showCoverageOnHover: false,
+    iconCreateFunction: cluster => {
+      const count = cluster.getChildCount();
+      const sz = count > 9 ? 46 : 38;
+      return L.divIcon({ className:'', iconSize:[sz,sz],
+        html:`<div style="width:${sz}px;height:${sz}px;border-radius:50%;border:3px solid ${BRAND2};background:${BRAND};display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;color:#fff;">${count}</div>`
+      });
+    }
+  });
+
+  PINS.forEach((p, i) => {
+    const m = L.marker([p.lat, p.lng], { icon: getIcon(i, false) })
+      .bindPopup(`<div class="nm-popup">
+        <div class="nm-popup-title">${p.name}</div>
+        <div class="nm-popup-address">${p.address}</div>
+        <div class="nm-popup-stars">${starStr(p.stars)} ${p.stars}.0</div>
+        <div class="nm-popup-tagline">"Could not find this on Google Maps. It found me."</div>
+      </div>`, { maxWidth: 260 });
+    m.on('click', () => showDetail(i));
+    markers.push(m);
+    clusterGroup.addLayer(m);
+  });
+  map.addLayer(clusterGroup);
+}
+
+function renderList() {
+  const panel = document.getElementById('list-panel');
+  panel.innerHTML = PINS.map((p, i) => `
+    <div class="place-item" id="item-${i}" onclick="showDetail(${i})">
+      <div class="place-icon-wrap">
+        ${(fixingMode && p.companyResponds)
+          ? `<div style="width:36px;height:36px;border-radius:50%;border:2.5px solid #34A853;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+               <img src="${LOGO}" style="width:100%;height:100%;object-fit:contain;padding:3px;"/>
+             </div>`
+          : `<div style="width:36px;height:36px;border-radius:50%;border:2.5px solid ${BRAND2};background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+               <img src="${LOGO}" style="width:100%;height:100%;object-fit:contain;padding:3px;"/>
+             </div>`
+        }
+      </div>
+      <div class="place-info">
+        <h3>${p.name}</h3>
+        <div class="place-meta">
+          <span class="stars">${starStr(p.stars)}</span>
+          <span class="star-num">${p.stars}.0</span>
+          ${(fixingMode && p.companyResponds) ? '<span class="responds-badge">✓ Responding</span>' : ''}
+        </div>
+        <div class="place-address">${p.address}</div>
+        <div class="place-snippet">${fixingMode && p.companyResponds && p.respondsNote ? p.respondsNote : p.reviewShort}</div>
+        <div class="place-chips"><span class="chip cat">${p.category}</span><span class="chip waste">${p.wasteType}</span></div>
+      </div>
+    </div>`).join('');
+}
+
+function showDetail(i) {
+  const p = PINS[i];
+  if (activeIdx >= 0 && markers[activeIdx]) markers[activeIdx].setIcon(getIcon(activeIdx, false));
+  activeIdx = i;
+  markers[i].setIcon(getIcon(i, true));
+
+  document.getElementById('list-panel').style.display = 'none';
+  document.getElementById('detail-panel').classList.add('visible');
+
+  document.getElementById('d-name').textContent = p.name;
+  document.getElementById('d-type').textContent = p.type;
+  document.getElementById('d-num').textContent = p.stars + '.0';
+  document.getElementById('d-stars').textContent = starStr(p.stars);
+  document.getElementById('d-review').textContent = p.reviewFull;
+  document.getElementById('d-sig').textContent = p.sig;
+  document.getElementById('d-pin-note').textContent = p.pinNote;
+  document.getElementById('d-tags').innerHTML = p.tags.map(t => `<span class="tag">${t}</span>`).join('');
+
+  const rb = document.getElementById('d-responds-box');
+  if (p.companyResponds && p.respondsNote) {
+    document.getElementById('d-responds-text').textContent = p.respondsNote;
+    rb.classList.remove('hidden');
+  } else {
+    rb.classList.add('hidden');
+  }
+
+  document.querySelectorAll('.place-item').forEach((el, idx) => el.classList.toggle('active', idx === i));
+  map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 13), { duration: 1.4, easeLinearity: 0.4 });
+  setTimeout(() => { if (markers[i]) markers[i].openPopup(); }, 1500);
+}
+
+function showList() {
+  if (activeIdx >= 0 && markers[activeIdx]) markers[activeIdx].setIcon(getIcon(activeIdx, false));
+  activeIdx = -1;
+  document.getElementById('list-panel').style.display = 'block';
+  document.getElementById('detail-panel').classList.remove('visible');
+  markers.forEach(m => m.closePopup());
+  map.flyTo(HQ, 5, { duration: 1.2 });
+}
+
+function toggleFix() {
+  fixingMode = !fixingMode;
+  const t = document.getElementById('fix-toggle');
+  t.classList.toggle('on', fixingMode);
+  document.getElementById('toggle-label').textContent =
+    fixingMode ? TOGGLE_ON_LABEL : TOGGLE_OFF_LABEL;
+  renderList();
+  markers.forEach((m, i) => m.setIcon(getIcon(i, i === activeIdx)));
+}
+
+function closeModal() {
+  document.getElementById('intro-modal').classList.add('gone');
+}
+
+function sharePinNative() {
+  if (activeIdx < 0) return;
+  const p = PINS[activeIdx];
+  const text = `${COMPANY} · ${p.name}: ${p.reviewShort} — Could not find this on Google Maps. It found me. ${window.location.href}`;
+  if (navigator.share) {
+    navigator.share({ title: COMPANY + ' · NoWhere Maps', text, url: window.location.href });
+  } else {
+    navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard.'));
+  }
+}
+
+function exportPDF() {
+  window.print();
+}
+</script>
+</body>
+</html>
