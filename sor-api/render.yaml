@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: sor-curriculum-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DB_PATH
+        value: /data/sor.db
+      - key: SOR_MASTER_KEY
+        generateValue: true
+    disk:
+      name: sor-data
+      mountPath: /data
+      sizeGB: 1
