@@ -1,0 +1,118 @@
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": "https://schoolofrecycling.com/#organization",
+  "name": "School of Recycling",
+  "legalName": "SoR LLC",
+  "url": "https://schoolofrecycling.com",
+  "logo": "https://schoolofrecycling.com/logo.png",
+  "description": "K-12 online waste and plastic education platform. Teaches children how waste systems actually work, emphasising systems thinking and real-world trade-offs.",
+  "email": "hello@schoolofrecycling.com",
+  "knowsAbout": [
+    "Waste management",
+    "Plastic pollution",
+    "Circular economy",
+    "Environmental education",
+    "Systems thinking",
+    "Ocean plastic",
+    "Producer responsibility"
+  ],
+  "memberOf": [
+    {
+      "@type": "Organization",
+      "name": "UNEP Global Plastics and Marine Litter Partnership (GPML)",
+      "url": "https://www.unep.org/gpml"
+    },
+    {
+      "@type": "Organization",
+      "name": "UN Global Compact",
+      "url": "https://unglobalcompact.org"
+    }
+  ],
+  "hasOfferCatalog": {
+    "@type": "OfferCatalog",
+    "name": "School of Recycling Curriculum",
+    "description": "K-12 waste and plastic curriculum available in Home Edition ($37) and Classroom Edition ($147). Currently available for ages 10–12 and 13–16. Ages 6–9 and 17+ in development.",
+    "url": "https://schoolofrecycling.com/courses"
+  },
+  "subjectOf": {
+    "@type": "DataFeed",
+    "name": "School of Recycling Curriculum Intelligence API",
+    "description": "Machine-readable curriculum data for AI agents and school procurement systems. Public endpoints for lesson listings, SDG mapping, and search. Gated endpoints for full detail.",
+    "url": "https://api.schoolofrecycling.com",
+    "documentation": "https://api.schoolofrecycling.com/docs",
+    "encodingFormat": "application/json",
+    "license": "https://schoolofrecycling.com/api-terms",
+    "about": {
+      "@type": "Thing",
+      "name": "K-12 environmental curriculum"
+    }
+  },
+  "teaches": [
+    {
+      "@type": "Course",
+      "name": "The Plastic Story — Ages 10–12",
+      "description": "Discover where plastic comes from and why it became so widespread.",
+      "educationalLevel": "grades 5-7",
+      "url": "https://schoolofrecycling.com/courses/plastic-story-10-12",
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Home Edition",
+          "price": "37",
+          "priceCurrency": "USD"
+        },
+        {
+          "@type": "Offer",
+          "name": "Classroom Edition",
+          "price": "147",
+          "priceCurrency": "USD"
+        }
+      ],
+      "educationalAlignment": [
+        {
+          "@type": "AlignmentObject",
+          "alignmentType": "educationalSubject",
+          "targetName": "SDG 4 — Quality Education",
+          "targetUrl": "https://sdgs.un.org/goals/goal4"
+        },
+        {
+          "@type": "AlignmentObject",
+          "alignmentType": "educationalSubject",
+          "targetName": "SDG 12 — Responsible Consumption and Production",
+          "targetUrl": "https://sdgs.un.org/goals/goal12"
+        },
+        {
+          "@type": "AlignmentObject",
+          "alignmentType": "educationalSubject",
+          "targetName": "SDG 13 — Climate Action",
+          "targetUrl": "https://sdgs.un.org/goals/goal13"
+        }
+      ]
+    },
+    {
+      "@type": "Course",
+      "name": "The Plastic Story — Ages 13–16",
+      "description": "Trace plastic from petrochemical feedstock to global commodity — and examine the economic and political forces that shaped its rise.",
+      "educationalLevel": "grades 8-11",
+      "url": "https://schoolofrecycling.com/courses/plastic-story-13-16",
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Home Edition",
+          "price": "37",
+          "priceCurrency": "USD"
+        },
+        {
+          "@type": "Offer",
+          "name": "Classroom Edition",
+          "price": "147",
+          "priceCurrency": "USD"
+        }
+      ]
+    }
+  ],
+  "sameAs": [
+    "https://unglobalcompact.org/what-is-gc/participants/schoolofrecycling"
+  ]
+}
