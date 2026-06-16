@@ -176,7 +176,8 @@ def about():
         },
         "api": {
             "version": "1.0.0",
-            "docs": "/docs",
+            "base_url": "https://api.schoolofrecycling.com",
+            "docs": "https://api.schoolofrecycling.com/docs",
             "request_access": "POST /request-access",
         },
     }
