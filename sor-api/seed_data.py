@@ -470,58 +470,486 @@ LESSONS = [
     },
 ]
 
-COMING_SOON = [
+LESSONS_6_9 = [
+    # ── Module 1 · Ages 6–9 ───────────────────────────────────────────────
     {
         "id": "plastic-m1-6-9",
         "title": "The Plastic Story (Ages 6–9)",
-        "description": "A gentle introduction to where plastic comes from and why we use so much of it — told through stories and simple activities.",
-        "full_description": "Coming soon — this age group is currently in development.",
+        "description": "Meet plastic! Find out where it comes from, why grown-ups started making so much of it, and why that turned out to be a really tricky problem.",
+        "full_description": (
+            "Told through narrated animation and guided storytime, this module introduces "
+            "young learners to plastic as a made-up material — something humans invented from "
+            "oil found deep underground. Children explore their own homes to find plastic "
+            "objects and begin to notice just how many there are. A simple 'plastic parade' "
+            "activity builds vocabulary and curiosity without introducing anxiety. The module "
+            "ends with the key question: if plastic lasts forever, where does it go when we "
+            "throw it away?"
+        ),
         "age_group": "6-9",
-        "availability": "coming_soon",
+        "availability": "available",
         "edition": "both",
         "price_home_usd": 37,
         "price_classroom_usd": 147,
         "waste_stream": "plastic",
-        "topic_tags": json.dumps(["plastic origins", "everyday plastic"]),
-        "learning_outcomes": json.dumps([]),
+        "topic_tags": json.dumps(["plastic origins", "everyday plastic", "materials", "curiosity"]),
+        "learning_outcomes": json.dumps([
+            "Name plastic as a human-made material that comes from oil",
+            "Find and count plastic objects in their everyday environment",
+            "Explain in simple terms why plastic lasting a long time can be a problem",
+            "Ask a question about what happens to plastic after we throw it away",
+        ]),
         "pedagogical_approach": "systems thinking",
-        "content_types": json.dumps(["video", "activity"]),
+        "content_types": json.dumps(["video", "activity", "reflection"]),
         "sdg_alignment": json.dumps([4, 12]),
         "language": "en",
         "duration_per_module_minutes": 15,
         "duration_total_minutes": 75,
         "audience": "both",
         "url": "https://schoolofrecycling.com/courses/plastic-story-6-9",
-        "is_free": 0,
+        "is_free": 1,
         "credential_context": json.dumps(["UNEP GPML member", "UN Global Compact"]),
-        "worksheet_descriptions": json.dumps([]),
-        "discussion_prompts": json.dumps([]),
+        "worksheet_descriptions": json.dumps([
+            "Plastic Parade — draw or list 10 plastic things you can find at home",
+            "Where Did It Come From? — match pictures of plastic objects to pictures of oil wells and factories",
+        ]),
+        "discussion_prompts": json.dumps([
+            "If you had to live without plastic for one day, what would be the hardest thing to give up?",
+            "Why do you think people started making so much plastic?",
+        ]),
     },
+
+    # ── Module 2 · Ages 6–9 ───────────────────────────────────────────────
     {
-        "id": "plastic-m1-17-plus",
-        "title": "The Plastic Story (Ages 17+)",
-        "description": "An advanced exploration of plastic systems, political economy, and structural levers for change — aimed at older students and adult learners.",
-        "full_description": "Coming soon — this age group is currently in development.",
-        "age_group": "17+",
-        "availability": "coming_soon",
+        "id": "plastic-m2-6-9",
+        "title": "Not All Plastic Is the Same (Ages 6–9)",
+        "description": "Did you know there are seven different kinds of plastic — and most of them can't be recycled where you live? Let's find out why.",
+        "full_description": (
+            "Using colour-coded sorting cards, children learn that the little number inside "
+            "the recycling triangle tells us what type of plastic something is — not whether "
+            "it will actually be recycled. Through a hands-on sorting game, students discover "
+            "that most plastic types need special machines that many towns don't have. The "
+            "module uses straightforward language to introduce the idea that 'recyclable' "
+            "and 'recycled' are different things — a foundational concept for later modules."
+        ),
+        "age_group": "6-9",
+        "availability": "available",
         "edition": "both",
         "price_home_usd": 37,
         "price_classroom_usd": 147,
         "waste_stream": "plastic",
-        "topic_tags": json.dumps(["plastic origins", "political economy", "systemic change"]),
-        "learning_outcomes": json.dumps([]),
+        "topic_tags": json.dumps(["plastic types", "resin codes", "recycling symbols", "sorting"]),
+        "learning_outcomes": json.dumps([
+            "Recognise the recycling triangle symbol and explain that the number inside shows the plastic type",
+            "Sort common plastic items by resin code using colour-coded cards",
+            "State that most plastic types are not recycled in most places",
+            "Distinguish between 'recyclable' (could be) and 'recycled' (actually is)",
+        ]),
+        "pedagogical_approach": "systems thinking",
+        "content_types": json.dumps(["video", "activity", "worksheet"]),
+        "sdg_alignment": json.dumps([4, 12]),
+        "language": "en",
+        "duration_per_module_minutes": 15,
+        "duration_total_minutes": 75,
+        "audience": "both",
+        "url": "https://schoolofrecycling.com/courses/plastic-types-6-9",
+        "is_free": 0,
+        "credential_context": json.dumps(["UNEP GPML member", "UN Global Compact"]),
+        "worksheet_descriptions": json.dumps([
+            "The Seven Plastics — colour in each type and write one thing made from it",
+            "Sorted! — cut out the plastic card images and sort them into 'collected near me' and 'not collected near me'",
+        ]),
+        "discussion_prompts": json.dumps([
+            "If the recycling symbol doesn't mean it gets recycled, why do you think it's still on the packaging?",
+            "What would happen if everyone put the wrong plastic in the recycling bin?",
+        ]),
+    },
+
+    # ── Module 3 · Ages 6–9 ───────────────────────────────────────────────
+    {
+        "id": "plastic-m3-6-9",
+        "title": "Where Does Rubbish Go? (Ages 6–9)",
+        "description": "Follow your bin bag on its big journey — from your house, to the truck, to the sorting centre, and beyond.",
+        "full_description": (
+            "A narrated animated journey follows 'Bag the Bin Bag' from kerbside collection "
+            "through a sorting facility and on to its final destination — which might be a "
+            "recycling plant, a landfill, or an incinerator. Children map the journey on a "
+            "simple flow diagram and discover that what happens to their rubbish depends on "
+            "where they live, not just what they put in the bin. The module builds foundational "
+            "understanding of waste as an infrastructure system — something that involves "
+            "trucks, workers, buildings, and decisions, not just bins."
+        ),
+        "age_group": "6-9",
+        "availability": "available",
+        "edition": "both",
+        "price_home_usd": 37,
+        "price_classroom_usd": 147,
+        "waste_stream": "plastic",
+        "topic_tags": json.dumps(["waste infrastructure", "recycling systems", "waste journey", "local government"]),
+        "learning_outcomes": json.dumps([
+            "Describe at least three steps in the journey from a bin to a waste facility",
+            "Name the three main destinations for rubbish: recycling plant, landfill, incinerator",
+            "Explain that where you live affects what gets recycled",
+            "Identify at least two people whose jobs involve waste",
+        ]),
+        "pedagogical_approach": "systems thinking",
+        "content_types": json.dumps(["video", "activity", "worksheet"]),
+        "sdg_alignment": json.dumps([4, 11, 12]),
+        "language": "en",
+        "duration_per_module_minutes": 15,
+        "duration_total_minutes": 75,
+        "audience": "both",
+        "url": "https://schoolofrecycling.com/courses/waste-systems-6-9",
+        "is_free": 0,
+        "credential_context": json.dumps(["UNEP GPML member", "UN Global Compact"]),
+        "worksheet_descriptions": json.dumps([
+            "Rubbish Journey Map — draw and label the stages from bin to final destination",
+            "Waste Workers — draw or write about three jobs that deal with our rubbish",
+        ]),
+        "discussion_prompts": json.dumps([
+            "Who is responsible for making sure rubbish goes to the right place — you, your family, or the council?",
+            "What do you think happens to plastic in a landfill after 100 years?",
+        ]),
+    },
+
+    # ── Module 4 · Ages 6–9 ───────────────────────────────────────────────
+    {
+        "id": "plastic-m4-6-9",
+        "title": "Plastic in the Ocean (Ages 6–9)",
+        "description": "Explore how plastic ends up in the sea, what it does to animals and fish, and why people all over the world are trying to stop it.",
+        "full_description": (
+            "Using illustrated storybook narration and simple diagrams, children follow a "
+            "plastic bag from a street drain to a river and into the ocean. The module "
+            "introduces ocean gyres using a 'spinning soup bowl' analogy, and explains "
+            "microplastics through the image of plastic 'crumbling like a biscuit' in "
+            "sunlight. A focus on seabirds and sea turtles makes the impact concrete and "
+            "emotionally resonant without being distressing. The module ends with examples "
+            "of real children and communities taking action to reduce plastic reaching the sea."
+        ),
+        "age_group": "6-9",
+        "availability": "available",
+        "edition": "both",
+        "price_home_usd": 37,
+        "price_classroom_usd": 147,
+        "waste_stream": "plastic",
+        "topic_tags": json.dumps(["ocean plastic", "microplastics", "marine animals", "pollution pathways"]),
+        "learning_outcomes": json.dumps([
+            "Trace a simple path from a plastic item on land to the ocean",
+            "Explain what microplastics are using an everyday analogy",
+            "Describe one way ocean plastic harms a marine animal",
+            "Name one action a community has taken to reduce plastic reaching the sea",
+        ]),
+        "pedagogical_approach": "systems thinking",
+        "content_types": json.dumps(["video", "activity", "worksheet", "reflection"]),
+        "sdg_alignment": json.dumps([4, 13, 14]),
+        "language": "en",
+        "duration_per_module_minutes": 15,
+        "duration_total_minutes": 75,
+        "audience": "both",
+        "url": "https://schoolofrecycling.com/courses/ocean-plastic-6-9",
+        "is_free": 0,
+        "credential_context": json.dumps(["UNEP GPML member", "UN Global Compact"]),
+        "worksheet_descriptions": json.dumps([
+            "Plastic's Ocean Journey — draw each step as a comic strip from street to sea",
+            "Ocean Animal Report — choose one animal and write two sentences about how plastic affects it",
+        ]),
+        "discussion_prompts": json.dumps([
+            "If you live far from the sea, can your plastic still end up in the ocean? How?",
+            "What could you do this week to stop one piece of plastic from reaching the sea?",
+        ]),
+    },
+
+    # ── Module 5 · Ages 6–9 ───────────────────────────────────────────────
+    {
+        "id": "plastic-m5-6-9",
+        "title": "What Can We Do? (Ages 6–9)",
+        "description": "Learn about the three Rs — reduce, reuse, recycle — and find out which one is the most powerful. Then make your own plan for using less plastic.",
+        "full_description": (
+            "This module introduces the waste hierarchy through a simple 'best to least best' "
+            "ladder and invites children to evaluate everyday choices against it. Using "
+            "relatable examples — water bottles, lunch boxes, carrier bags — students practise "
+            "ranking options from 'use less' to 'throw away'. The module is honest that "
+            "recycling is not a magic fix, while remaining age-appropriately constructive: "
+            "children finish by making a personal 'plastic promise' and designing a poster "
+            "for their home or classroom. The emphasis is on individual action as one part "
+            "of a bigger system, not the whole solution."
+        ),
+        "age_group": "6-9",
+        "availability": "available",
+        "edition": "both",
+        "price_home_usd": 37,
+        "price_classroom_usd": 147,
+        "waste_stream": "plastic",
+        "topic_tags": json.dumps(["waste hierarchy", "reduce reuse recycle", "circular economy", "personal action"]),
+        "learning_outcomes": json.dumps([
+            "Order 'reduce, reuse, recycle' from most to least effective",
+            "Apply the waste hierarchy to at least three everyday plastic choices",
+            "Explain in simple terms why recycling alone cannot solve the plastic problem",
+            "Make and write down one personal commitment to use less plastic",
+        ]),
+        "pedagogical_approach": "systems thinking",
+        "content_types": json.dumps(["video", "activity", "worksheet", "reflection"]),
+        "sdg_alignment": json.dumps([4, 12]),
+        "language": "en",
+        "duration_per_module_minutes": 15,
+        "duration_total_minutes": 75,
+        "audience": "both",
+        "url": "https://schoolofrecycling.com/courses/circular-economy-6-9",
+        "is_free": 0,
+        "credential_context": json.dumps(["UNEP GPML member", "UN Global Compact"]),
+        "worksheet_descriptions": json.dumps([
+            "The 3R Ladder — place six everyday scenarios on the right rung of the waste hierarchy",
+            "My Plastic Promise — write or draw your personal commitment and decorate it as a poster",
+        ]),
+        "discussion_prompts": json.dumps([
+            "If every person in your class used one less plastic bag a week, how many bags would that save in a year?",
+            "Is it enough for just kids to try to use less plastic, or do grown-ups and companies need to change too?",
+        ]),
+    },
+]
+
+LESSONS_17_PLUS = [
+    # ── Module 1 · Ages 17+ ───────────────────────────────────────────────
+    {
+        "id": "plastic-m1-17-plus",
+        "title": "The Plastic Story (Ages 17+)",
+        "description": "Trace plastic from its petrochemical origins through industrial scale-up and deliberate marketisation — and examine who built this system and why.",
+        "full_description": (
+            "This module situates plastic within the history of twentieth-century industrial "
+            "capitalism, tracing the development of the petrochemical industry from post-WWI "
+            "surpluses to the deliberate construction of a throwaway consumer culture. Students "
+            "engage with primary sources — including industry documents, advertising archives, "
+            "and congressional testimony — and apply political economy frameworks to analyse "
+            "how the plastic system was built. The module introduces life-cycle assessment "
+            "methodology at a technical level, examines carbon accounting for plastics across "
+            "their full lifecycle, and challenges students to interrogate whose interests are "
+            "served by dominant recycling narratives."
+        ),
+        "age_group": "17+",
+        "availability": "available",
+        "edition": "both",
+        "price_home_usd": 37,
+        "price_classroom_usd": 147,
+        "waste_stream": "plastic",
+        "topic_tags": json.dumps(["plastic origins", "fossil fuels", "political economy", "life-cycle assessment", "producer responsibility", "industrial history"]),
+        "learning_outcomes": json.dumps([
+            "Construct a historical account of how single-use plastic culture was deliberately engineered",
+            "Apply life-cycle assessment methodology to calculate comparative environmental costs for two packaging materials",
+            "Evaluate primary source documents for rhetorical strategy and vested interest",
+            "Articulate a structural critique of recycling as the primary policy response to plastic pollution",
+        ]),
         "pedagogical_approach": "critical inquiry",
         "content_types": json.dumps(["video", "worksheet", "discussion_prompt", "reflection"]),
-        "sdg_alignment": json.dumps([4, 12, 13]),
+        "sdg_alignment": json.dumps([4, 12, 13, 16]),
         "language": "en",
         "duration_per_module_minutes": 40,
         "duration_total_minutes": 200,
         "audience": "both",
         "url": "https://schoolofrecycling.com/courses/plastic-story-17-plus",
+        "is_free": 1,
+        "credential_context": json.dumps(["UNEP GPML member", "UN Global Compact"]),
+        "worksheet_descriptions": json.dumps([
+            "LCA Deep Dive — conduct a comparative lifecycle assessment for PET vs glass vs aluminium packaging across six impact categories",
+            "Primary Source Analysis — annotate three industry documents from 1960–1990 and map the rhetorical strategies used to shift responsibility to consumers",
+        ]),
+        "discussion_prompts": json.dumps([
+            "Is the plastic crisis primarily a failure of consumer behaviour, corporate strategy, or state regulation? Build an evidence-based argument.",
+            "To what extent is recycling a technical solution to what is fundamentally a political problem?",
+        ]),
+    },
+
+    # ── Module 2 · Ages 17+ ───────────────────────────────────────────────
+    {
+        "id": "plastic-m2-17-plus",
+        "title": "Plastic Types & Recyclability (Ages 17+)",
+        "description": "Examine the chemistry, economics, and politics behind why the global plastic recycling rate has never exceeded 10% — despite fifty years of trying.",
+        "full_description": (
+            "Students conduct a technical and political economy analysis of plastic recycling "
+            "failure. The module covers polymer chemistry at a level appropriate for older "
+            "students, including why mechanical recycling degrades polymer chains and why "
+            "chemical recycling remains commercially unscalable at current technology levels. "
+            "Students analyse commodity market data for secondary plastics, examine how virgin "
+            "plastic pricing (subsidised through fossil fuel policy) undercuts recycled material "
+            "markets, and evaluate the evidence on extended producer responsibility schemes "
+            "in the EU, UK, and Canada. The module includes a critical appraisal of major "
+            "brand sustainability claims using publicly available third-party data."
+        ),
+        "age_group": "17+",
+        "availability": "available",
+        "edition": "both",
+        "price_home_usd": 37,
+        "price_classroom_usd": 147,
+        "waste_stream": "plastic",
+        "topic_tags": json.dumps(["plastic types", "recycling systems", "chemical recycling", "producer responsibility", "commodity markets", "greenwashing"]),
+        "learning_outcomes": json.dumps([
+            "Explain the chemical mechanisms that limit mechanical recycling of mixed plastic streams",
+            "Assess the commercial viability of chemical recycling against current evidence",
+            "Analyse how fossil fuel subsidies affect the economics of plastic recycling markets",
+            "Evaluate an EPR scheme in a named jurisdiction against its stated objectives using available data",
+        ]),
+        "pedagogical_approach": "real-world trade-offs",
+        "content_types": json.dumps(["video", "worksheet", "discussion_prompt", "reflection"]),
+        "sdg_alignment": json.dumps([4, 12, 13, 17]),
+        "language": "en",
+        "duration_per_module_minutes": 40,
+        "duration_total_minutes": 200,
+        "audience": "both",
+        "url": "https://schoolofrecycling.com/courses/plastic-types-17-plus",
         "is_free": 0,
         "credential_context": json.dumps(["UNEP GPML member", "UN Global Compact"]),
-        "worksheet_descriptions": json.dumps([]),
-        "discussion_prompts": json.dumps([]),
+        "worksheet_descriptions": json.dumps([
+            "Market Analysis — track commodity price data for rPET, rHDPE, and virgin PET over five years and identify causal factors in price divergence",
+            "EPR Scheme Audit — evaluate the French REP emballages scheme against its 2025 targets using published data",
+        ]),
+        "discussion_prompts": json.dumps([
+            "If fossil fuel subsidies were eliminated tomorrow, what would happen to plastic recycling markets? Model the mechanism.",
+            "Should chemical recycling count toward national recycling targets? What are the political stakes of that definitional choice?",
+        ]),
+    },
+
+    # ── Module 3 · Ages 17+ ───────────────────────────────────────────────
+    {
+        "id": "plastic-m3-17-plus",
+        "title": "Waste Systems & Infrastructure (Ages 17+)",
+        "description": "Analyse waste management as a political and economic infrastructure system — from procurement models and gate fees to the global waste trade and environmental justice.",
+        "full_description": (
+            "This module provides a systems analysis of waste management infrastructure, "
+            "covering procurement economics (public vs private, gate fees, landfill tax "
+            "pass-through), MRF technology investment cycles, and the political economy of "
+            "waste contracts. Students conduct a detailed case study of China's 2018 National "
+            "Sword policy and model its downstream effects on collection, processing, and "
+            "export markets in five countries. The module introduces environmental justice "
+            "as an analytical lens — examining how waste burden distribution maps onto "
+            "race, income, and geography — and evaluates the Basel Convention plastic "
+            "amendments as an international legal instrument."
+        ),
+        "age_group": "17+",
+        "availability": "available",
+        "edition": "both",
+        "price_home_usd": 37,
+        "price_classroom_usd": 147,
+        "waste_stream": "plastic",
+        "topic_tags": json.dumps(["recycling systems", "waste infrastructure", "waste trade", "waste colonialism", "environmental justice", "Basel Convention", "policy"]),
+        "learning_outcomes": json.dumps([
+            "Model the downstream effects of China National Sword on waste markets in at least three countries using data",
+            "Apply environmental justice frameworks to analyse the geographic distribution of waste infrastructure",
+            "Evaluate the Basel Convention plastic waste amendments as a legal instrument — scope, enforcement, and gaps",
+            "Compare privatised and municipally-operated waste management on cost, accountability, and environmental outcomes",
+        ]),
+        "pedagogical_approach": "critical inquiry",
+        "content_types": json.dumps(["video", "worksheet", "discussion_prompt", "reflection"]),
+        "sdg_alignment": json.dumps([4, 10, 11, 12, 16, 17]),
+        "language": "en",
+        "duration_per_module_minutes": 40,
+        "duration_total_minutes": 200,
+        "audience": "both",
+        "url": "https://schoolofrecycling.com/courses/waste-systems-17-plus",
+        "is_free": 0,
+        "credential_context": json.dumps(["UNEP GPML member", "UN Global Compact"]),
+        "worksheet_descriptions": json.dumps([
+            "National Sword Impact Model — build a causal map tracing policy effects across five national waste systems",
+            "Environmental Justice Mapping — plot MRF, landfill, and incinerator locations against census income and ethnicity data for a chosen urban area",
+        ]),
+        "discussion_prompts": json.dumps([
+            "Is the global waste trade a form of environmental colonialism, or a legitimate mechanism for resource efficiency? What evidence would change your view?",
+            "Should waste management be treated as a public good like water supply, or is market competition in the public interest? What does the evidence show?",
+        ]),
+    },
+
+    # ── Module 4 · Ages 17+ ───────────────────────────────────────────────
+    {
+        "id": "plastic-m4-17-plus",
+        "title": "Ocean Plastic & Ecosystems (Ages 17+)",
+        "description": "Review the scientific evidence on ocean plastic impacts, critically evaluate cleanup and source-reduction interventions, and assess the global treaty landscape.",
+        "full_description": (
+            "Students engage with the primary scientific literature on ocean plastic — covering "
+            "bioaccumulation pathways, endocrine disruption by plastic additives, microplastic "
+            "ingestion across trophic levels, and the emerging evidence on nanoplastics in "
+            "human tissue. The module critically evaluates ocean cleanup technology claims "
+            "against peer-reviewed evidence, including bycatch data and cost-per-tonne "
+            "comparisons with source-reduction alternatives. Students analyse the negotiating "
+            "history of the UN Global Plastics Treaty and assess competing national positions, "
+            "identifying structural barriers to an effective binding agreement."
+        ),
+        "age_group": "17+",
+        "availability": "available",
+        "edition": "both",
+        "price_home_usd": 37,
+        "price_classroom_usd": 147,
+        "waste_stream": "plastic",
+        "topic_tags": json.dumps(["ocean plastic", "microplastics", "nanoplastics", "marine ecosystems", "cleanup technology", "UN Plastics Treaty", "source reduction"]),
+        "learning_outcomes": json.dumps([
+            "Evaluate the scientific evidence for microplastic and nanoplastic impacts on human and ecosystem health",
+            "Critically assess ocean cleanup technology using cost-effectiveness and unintended consequence data",
+            "Analyse the negotiating dynamics of the UN Global Plastics Treaty and identify the main fault lines",
+            "Compare upstream production caps with downstream cleanup as policy mechanisms using a cost-benefit framework",
+        ]),
+        "pedagogical_approach": "critical inquiry",
+        "content_types": json.dumps(["video", "worksheet", "discussion_prompt", "reflection"]),
+        "sdg_alignment": json.dumps([4, 13, 14, 16, 17]),
+        "language": "en",
+        "duration_per_module_minutes": 40,
+        "duration_total_minutes": 200,
+        "audience": "both",
+        "url": "https://schoolofrecycling.com/courses/ocean-plastic-17-plus",
+        "is_free": 0,
+        "credential_context": json.dumps(["UNEP GPML member", "UN Global Compact"]),
+        "worksheet_descriptions": json.dumps([
+            "Evidence Appraisal — rate the quality of evidence for five ocean cleanup technology claims using a structured appraisal tool",
+            "Treaty Simulation — take a national negotiating position in the UN Plastics Treaty and prepare a position paper addressing production caps, liability, and financing",
+        ]),
+        "discussion_prompts": json.dumps([
+            "Given the emerging nanoplastics evidence, should the precautionary principle require an immediate moratorium on new plastic production? What are the counter-arguments?",
+            "Why have international plastic pollution negotiations repeatedly failed to agree on production caps? Identify the structural interests at play.",
+        ]),
+    },
+
+    # ── Module 5 · Ages 17+ ───────────────────────────────────────────────
+    {
+        "id": "plastic-m5-17-plus",
+        "title": "Circular Economy & Trade-offs (Ages 17+)",
+        "description": "Stress-test circular economy theory against political economy, thermodynamic limits, and global trade rules — and design an intervention that could actually work.",
+        "full_description": (
+            "Students conduct a rigorous critique of circular economy frameworks, examining "
+            "the thermodynamic limits of material cycling, the rebound effect, and whether "
+            "circular economy represents a genuine systems paradigm shift or a legitimising "
+            "narrative for continued growth. The module evaluates the Ellen MacArthur "
+            "Foundation model, the EU Circular Economy Action Plan, and degrowth critiques "
+            "side by side. Students analyse how international trade rules (WTO, RCEP, CPTPP) "
+            "constrain national circular economy policy, and complete a capstone project: "
+            "designing a binding plastic policy intervention, stress-testing it against "
+            "industry, trade, and political constraints, and presenting it as a policy brief."
+        ),
+        "age_group": "17+",
+        "availability": "available",
+        "edition": "both",
+        "price_home_usd": 37,
+        "price_classroom_usd": 147,
+        "waste_stream": "plastic",
+        "topic_tags": json.dumps(["circular economy", "degrowth", "policy design", "trade rules", "rebound effect", "systems thinking", "trade-offs"]),
+        "learning_outcomes": json.dumps([
+            "Apply thermodynamic constraints to evaluate the theoretical limits of circular economy",
+            "Compare circular economy and degrowth frameworks and assess their political feasibility",
+            "Identify specific WTO or regional trade agreement provisions that constrain circular economy policy",
+            "Produce a structured policy brief for a plastic intervention in a named jurisdiction, including a stakeholder impact assessment",
+        ]),
+        "pedagogical_approach": "real-world trade-offs",
+        "content_types": json.dumps(["video", "worksheet", "discussion_prompt", "reflection", "activity"]),
+        "sdg_alignment": json.dumps([4, 8, 10, 12, 13, 16, 17]),
+        "language": "en",
+        "duration_per_module_minutes": 40,
+        "duration_total_minutes": 200,
+        "audience": "both",
+        "url": "https://schoolofrecycling.com/courses/circular-economy-17-plus",
+        "is_free": 0,
+        "credential_context": json.dumps(["UNEP GPML member", "UN Global Compact"]),
+        "worksheet_descriptions": json.dumps([
+            "Framework Stress-Test — apply four critique lenses (thermodynamic, rebound, trade, power) to the Ellen MacArthur Foundation circular economy model",
+            "Policy Brief — draft a 600-word policy intervention for a named jurisdiction, including evidence base, stakeholder map, and anticipated opposition",
+        ]),
+        "discussion_prompts": json.dumps([
+            "Is a circular economy compatible with infinite economic growth, or does circularity require questioning the growth imperative itself?",
+            "Which is more likely to achieve rapid plastic reduction: a binding international treaty, national regulation, or market-driven corporate action? Make the strongest case for each, then state your own position.",
+        ]),
     },
 ]
 
@@ -531,7 +959,7 @@ def seed():
     conn = get_db()
     c = conn.cursor()
 
-    all_lessons = LESSONS + COMING_SOON
+    all_lessons = LESSONS + LESSONS_6_9 + LESSONS_17_PLUS
     for lesson in all_lessons:
         c.execute("""
             INSERT OR REPLACE INTO lessons (
