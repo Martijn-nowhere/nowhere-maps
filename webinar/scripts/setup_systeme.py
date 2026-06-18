@@ -145,9 +145,9 @@ def create_funnel_steps(api_key: str, funnel_id: str) -> list[dict]:
         if result is not None:
             step_id = str(result.get("id", ""))
             print(f"  [OK]  '{step['name']}' step — ID: {step_id}")
-            created.append({"name": step["name"], "stepType": step["stepType"], "id": step_id})
+            created.append({"name": step["name"], "type": step["type"], "id": step_id})
         else:
-            created.append({"name": step["name"], "stepType": step["stepType"], "id": None})
+            created.append({"name": step["name"], "type": step["type"], "id": None})
     return created
 
 
@@ -359,7 +359,7 @@ def main() -> None:
         steps = create_funnel_steps(api_key, funnel_id)
     else:
         print("  [SKIP] Cannot create funnel steps without a funnel ID.")
-        steps = [{"name": s["name"], "stepType": s["stepType"], "id": None} for s in FUNNEL_STEPS]
+        steps = [{"name": s["name"], "type": s["type"], "id": None} for s in FUNNEL_STEPS]
 
     # Email campaigns are not available via the systeme.io API.
     # Print all email content so it can be pasted manually.
