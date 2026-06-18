@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School of Recycling — Summer Webinar</title>
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --yellow:      #eaff94;
+    --green:       #0db762;
+    --dark-green:  #085030;
+    --off-white:   #f8f8f0;
+    --ink:         #1a1a1a;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--dark-green);
+  }
+
+  /* ── Slides wrapper ── */
+  #deck {
+    width: 100vw; height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 6vh 8vw 10vh;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+
+  .slide.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* ── Themes ── */
+  .slide.dark {
+    background: var(--dark-green);
+    color: var(--off-white);
+  }
+  .slide.light {
+    background: var(--off-white);
+    color: var(--ink);
+  }
+  .slide.yellow {
+    background: var(--yellow);
+    color: var(--dark-green);
+  }
+
+  /* ── Typography ── */
+  .slide h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.6rem, 4vw, 3.4rem);
+    line-height: 1.2;
+    margin-bottom: 0.5em;
+  }
+  .slide h2 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.2rem, 2.8vw, 2.2rem);
+    line-height: 1.3;
+    margin-bottom: 0.5em;
+  }
+  .slide p, .slide li {
+    font-size: clamp(0.9rem, 1.6vw, 1.25rem);
+    line-height: 1.6;
+    max-width: 70ch;
+  }
+  .slide ul { list-style: none; padding: 0; }
+  .slide ul li { padding-left: 1.4em; position: relative; }
+  .slide ul li::before { content: "–"; position: absolute; left: 0; }
+
+  /* ── Tag / Pill ── */
+  .tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.25em 0.75em;
+    border-radius: 2px;
+    margin-bottom: 1em;
+  }
+  .tag-green  { background: var(--green);      color: #fff; }
+  .tag-yellow { background: var(--yellow);     color: var(--dark-green); }
+  .tag-dark   { background: var(--dark-green); color: var(--yellow); border: 1px solid var(--yellow); }
+
+  /* ── Colour helpers ── */
+  .yellow { color: var(--yellow); }
+  .green  { color: var(--green);  }
+  .dark-green { color: var(--dark-green); }
+  .muted { opacity: 0.75; }
+
+  /* ── Callout boxes ── */
+  .callout-yellow {
+    background: var(--yellow);
+    color: var(--dark-green);
+    padding: 1em 1.4em;
+    border-radius: 4px;
+    margin-top: 1.2em;
+    max-width: 65ch;
+  }
+  .callout-dark {
+    background: var(--dark-green);
+    color: var(--yellow);
+    padding: 1em 1.4em;
+    border-radius: 4px;
+    margin-top: 1.2em;
+    max-width: 65ch;
+    border: 1px solid rgba(234,255,148,0.3);
+  }
+
+  /* ── Quote blocks ── */
+  .quote-block {
+    border-left: 4px solid var(--yellow);
+    padding: 0.6em 1em;
+    margin: 0.5em 0;
+    font-style: italic;
+    max-width: 60ch;
+    font-size: clamp(0.85rem, 1.4vw, 1.1rem);
+  }
+
+  /* ── Two-column layout ── */
+  .cols {
+    display: flex;
+    gap: 4vw;
+    width: 100%;
+    max-width: 90ch;
+    margin-top: 1em;
+  }
+  .col { flex: 1; }
+  .col h3 {
+    font-family: Georgia, serif;
+    font-size: clamp(0.85rem, 1.5vw, 1.1rem);
+    margin-bottom: 0.5em;
+    color: var(--yellow);
+  }
+  .light .col h3 { color: var(--dark-green); }
+  .col ul li { font-size: clamp(0.8rem, 1.3vw, 1rem); margin-bottom: 0.3em; }
+
+  /* ── Divider ── */
+  .divider {
+    width: 80px;
+    height: 2px;
+    background: currentColor;
+    margin: 1.2em 0;
+    opacity: 0.4;
+  }
+
+  /* ── Big price / statement ── */
+  .big-price {
+    font-family: Georgia, serif;
+    font-size: clamp(4rem, 10vw, 9rem);
+    font-weight: 700;
+    line-height: 1;
+    color: var(--dark-green);
+    margin: 0.1em 0;
+  }
+  .big-statement {
+    font-family: Georgia, serif;
+    font-size: clamp(1.4rem, 3vw, 2.8rem);
+    line-height: 1.25;
+    margin: 0.5em 0;
+    max-width: 65ch;
+  }
+
+  /* ── Stack list ── */
+  .stack-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1em;
+    border-bottom: 1px dotted rgba(8,80,48,0.25);
+    padding: 0.5em 0;
+    font-size: clamp(0.85rem, 1.5vw, 1.15rem);
+    max-width: 55ch;
+  }
+  .stack-item .price-label {
+    white-space: nowrap;
+    font-weight: 700;
+    font-size: 0.9em;
+    opacity: 0.8;
+  }
+
+  /* ── Notes panel ── */
+  #notes-panel {
+    display: none;
+    position: fixed;
+    bottom: 22px;
+    left: 0; right: 0;
+    background: rgba(0,0,0,0.88);
+    color: #fff;
+    padding: 0.8em 2em;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    z-index: 50;
+    max-height: 18vh;
+    overflow-y: auto;
+    border-top: 2px solid var(--yellow);
+  }
+  #notes-panel.visible { display: block; }
+  #notes-panel strong {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--yellow);
+    margin-bottom: 0.25em;
+  }
+
+  /* ── Progress bar ── */
+  #progress {
+    position: fixed;
+    bottom: 0; left: 0;
+    height: 4px;
+    background: var(--yellow);
+    transition: width 0.35s ease;
+    z-index: 60;
+  }
+
+  /* ── Slide counter ── */
+  #counter {
+    position: fixed;
+    top: 1.2em; right: 1.8em;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: rgba(248,248,240,0.55);
+    z-index: 60;
+  }
+
+  /* ── Cover accent ── */
+  .cover-tag {
+    display: inline-block;
+    border: 1px solid rgba(234,255,148,0.4);
+    border-radius: 20px;
+    padding: 0.3em 1em;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    color: rgba(234,255,148,0.8);
+    margin-top: 1.5em;
+  }
+
+  /* ── Step tag ── */
+  .step-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 0.6em;
+  }
+
+  /* ── Checkmark list ── */
+  .check-list { list-style: none; padding: 0; }
+  .check-list li {
+    padding: 0.35em 0 0.35em 2em;
+    position: relative;
+    font-size: clamp(0.85rem, 1.5vw, 1.15rem);
+    color: var(--yellow);
+  }
+  .check-list li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--green);
+    font-weight: 700;
+  }
+
+  /* ── Yes-statement list ── */
+  .yes-list { list-style: none; padding: 0; margin-top: 0.5em; }
+  .yes-list li {
+    font-size: clamp(0.9rem, 1.6vw, 1.2rem);
+    color: var(--yellow);
+    padding: 0.55em 0;
+    border-bottom: 1px solid rgba(234,255,148,0.15);
+    max-width: 65ch;
+  }
+
+  /* ── Arrow / divider for slide 8 ── */
+  .shift-arrow {
+    font-size: 1.8rem;
+    color: var(--green);
+    margin: 0.5em 0;
+    line-height: 1;
+  }
+
+  /* ── Recap bullets ── */
+  .recap-list { list-style: none; padding: 0; }
+  .recap-list li {
+    padding: 0.3em 0 0.3em 1.6em;
+    position: relative;
+    font-size: clamp(0.85rem, 1.5vw, 1.15rem);
+    color: var(--yellow);
+  }
+  .recap-list li::before {
+    content: "→";
+    position: absolute; left: 0;
+    color: var(--green);
+  }
+
+  /* ── URL display ── */
+  .big-url {
+    font-family: Georgia, serif;
+    font-size: clamp(1.8rem, 4.5vw, 4rem);
+    font-weight: 700;
+    color: var(--dark-green);
+    letter-spacing: -0.01em;
+    margin: 0.3em 0;
+  }
+  .steps-list { list-style: none; padding: 0; margin-top: 0.8em; }
+  .steps-list li {
+    font-size: clamp(0.85rem, 1.5vw, 1.1rem);
+    padding: 0.3em 0;
+    color: var(--dark-green);
+  }
+
+  /* ── Center layout (slide 23) ── */
+  .centered {
+    align-items: center;
+    text-align: center;
+  }
+
+  /* ── Print mode ── */
+  @media print {
+    html, body { overflow: visible; height: auto; }
+    #deck { height: auto; position: static; overflow: visible; }
+    #progress, #counter, #notes-panel { display: none !important; }
+    .slide {
+      position: relative !important;
+      opacity: 1 !important;
+      pointer-events: all !important;
+      page-break-after: always;
+      break-after: page;
+      height: 100vh;
+      min-height: 100vh;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="deck">
+
+  <!-- ── SLIDE 1 — Cover ── -->
+  <section class="slide dark active" id="slide-1">
+    <div class="tag tag-yellow">Free Training · Homeschool Parents</div>
+    <h1 class="yellow" style="max-width:18ch; font-size: clamp(1.8rem, 4.5vw, 3.8rem);">
+      How to Teach Your Kids About Waste This Summer<br>
+      <span style="opacity:0.85">(Without It Feeling Like School)</span>
+    </h1>
+    <p style="margin-top:1em; color:var(--off-white); opacity:0.85;">A free training for homeschool parents</p>
+    <div class="cover-tag">Summer Edition · Bonuses close August 31</div>
+    <div class="notes">Welcome — introduce yourself briefly, thank them for being here.</div>
+  </section>
+
+  <!-- ── SLIDE 2 — Hook ── -->
+  <section class="slide dark" id="slide-2">
+    <p style="font-size:clamp(0.8rem,1.3vw,1rem); letter-spacing:0.1em; text-transform:uppercase; color:var(--green); font-weight:700; margin-bottom:0.8em;">Quick question before we start:</p>
+    <h1 style="color:var(--yellow); max-width:20ch; font-size:clamp(1.6rem,3.8vw,3.2rem);">When your child throws something in the bin — do they actually know where it goes?</h1>
+    <p style="margin-top:1.2em; max-width:55ch; color:var(--off-white);">Not in a vague sense. Do they know what happens in the next 24 hours? Whether it gets recycled at all?</p>
+    <div class="notes">Pause after this question. Let it land. The silence is intentional.</div>
+  </section>
+
+  <!-- ── SLIDE 3 — Pain: The Gap ── -->
+  <section class="slide dark" id="slide-3">
+    <div class="tag tag-green">PAIN</div>
+    <h1 style="color:var(--off-white); max-width:22ch;">You're doing everything right. Something still isn't working.</h1>
+    <ul style="margin-top:1.2em; display:flex; flex-direction:column; gap:0.9em;">
+      <li style="font-size:clamp(0.9rem,1.6vw,1.2rem); max-width:60ch; color:var(--off-white);">You recycle. You bought the reusable bags. You talk about it.</li>
+      <li style="font-size:clamp(0.9rem,1.6vw,1.2rem); max-width:60ch; color:var(--yellow);">But ask your child WHY we sort waste — and you get a blank stare.</li>
+    </ul>
+    <div class="notes">This is the frustration we're naming. Not a failure — a gap.</div>
+  </section>
+
+  <!-- ── SLIDE 4 — Pain: The 3 Moments ── -->
+  <section class="slide dark" id="slide-4">
+    <h1 style="color:var(--off-white);">Sound familiar?</h1>
+    <div style="display:flex; flex-direction:column; gap:0.8em; margin-top:1em;">
+      <div class="quote-block">"We watched a documentary. My kid was upset for a day. Then forgot about it."</div>
+      <div class="quote-block">"My child cares about animals — but has no idea the wrapper they just threw away could end up in the ocean."</div>
+      <div class="quote-block">"I model good behaviour. They copy me. But they can't explain why."</div>
+    </div>
+    <div class="notes">Read these slowly. Pause between each. Let parents recognise themselves.</div>
+  </section>
+
+  <!-- ── SLIDE 5 — Tease ── -->
+  <section class="slide dark" id="slide-5">
+    <div class="tag tag-yellow">WHAT YOU'LL LEARN TODAY</div>
+    <h1 style="color:var(--off-white);">In the next 45 minutes:</h1>
+    <ul class="check-list" style="margin-top:1em;">
+      <li style="color:var(--off-white);">Why environmental content creates awareness but not action — and the fix</li>
+      <li style="color:var(--off-white);">The exact framework that takes kids from 'recycling is good' to understanding the whole system</li>
+      <li style="color:var(--off-white);">A real module you can start with your child this week</li>
+    </ul>
+    <div class="callout-yellow" style="margin-top:1.5em;">
+      <strong style="font-size:clamp(0.85rem,1.4vw,1.1rem);">Stick around for the last 10 minutes — I have something specific for families watching today.</strong>
+    </div>
+    <div class="notes">This sets expectations and creates open loops. The last-10-minutes line is retention gold.</div>
+  </section>
+
+  <!-- ── SLIDE 6 — Story / Credibility ── -->
+  <section class="slide light" id="slide-6">
+    <div class="tag tag-green">WHY I'M QUALIFIED</div>
+    <h1 style="color:var(--ink);">I spent 15 years inside the problem.</h1>
+    <div class="cols" style="margin-top:1em;">
+      <div class="col">
+        <h3 style="color:var(--dark-green); font-family:Georgia,serif; font-size:clamp(0.85rem,1.4vw,1rem); margin-bottom:0.5em; font-weight:700;">North Sea</h3>
+        <p style="color:var(--ink);">Oil industry — directional driller. I saw how fossil fuels power the plastic problem from the inside.</p>
+      </div>
+      <div class="col">
+        <h3 style="color:var(--dark-green); font-family:Georgia,serif; font-size:clamp(0.85rem,1.4vw,1rem); margin-bottom:0.5em; font-weight:700;">Bali</h3>
+        <p style="color:var(--ink);">Manufactured recycled plastic products. Hosted 1,000+ school kids at our facility. Saw what happens when children actually understand the system.</p>
+      </div>
+    </div>
+    <div class="divider" style="background:var(--ink);"></div>
+    <p style="color:var(--dark-green); font-weight:600;">School of Recycling is the online version of that experience.</p>
+    <div class="notes">The oil industry background is counterintuitive — it signals transformation, not idealism. Don't rush past it.</div>
+  </section>
+
+  <!-- ── SLIDE 7 — Position ── -->
+  <section class="slide dark" id="slide-7">
+    <div class="tag tag-yellow">WHY THIS IS DIFFERENT</div>
+    <h1 style="color:var(--off-white); max-width:24ch;">Documentaries. Books. Dinner table conversations. Why don't they stick?</h1>
+    <p style="margin-top:0.8em; color:var(--off-white); opacity:0.85;">They give kids awareness without structure. Feeling without framework.</p>
+    <div class="callout-yellow" style="margin-top:1.2em;">
+      <p style="margin-bottom:0.6em;">School of Recycling is built the way a child actually learns — through stories, cause and effect, and practical action.</p>
+      <p>Not a lecture. Not a quiz. The kind of learning where they finish a module and immediately want to show you something.</p>
+    </div>
+    <div class="notes">You're positioning against 'do nothing' and 'random YouTube.' Not against competitors.</div>
+  </section>
+
+  <!-- ── SLIDE 8 — Paradigm Shift ── -->
+  <section class="slide dark" id="slide-8">
+    <div class="tag tag-yellow">THE SHIFT</div>
+    <h1 style="color:var(--off-white);">The belief that's working against you:</h1>
+    <blockquote style="font-family:Georgia,serif; font-size:clamp(1.1rem,2.2vw,1.9rem); color:var(--yellow); margin:0.7em 0; font-style:italic; max-width:55ch; line-height:1.4;">"If I model good environmental behaviour, my kids will pick it up."</blockquote>
+    <p style="color:var(--off-white); opacity:0.85;">Behaviour modelling creates habits. It doesn't create understanding.</p>
+    <div class="shift-arrow">↓</div>
+    <p class="big-statement" style="color:var(--yellow); font-size:clamp(1.1rem,2.3vw,2rem); max-width:50ch;">Stop trying to get your child to CARE about the environment. Help them UNDERSTAND it.</p>
+    <p style="color:var(--green); font-size:clamp(0.85rem,1.4vw,1.05rem); font-weight:600;">Caring follows understanding — not the other way around.</p>
+    <div class="notes">Frame this as a revelation, not a criticism. "Here's something counterintuitive that changed how I think about this."</div>
+  </section>
+
+  <!-- ── SLIDE 9 — Mechanism 1 ── -->
+  <section class="slide dark" id="slide-9">
+    <div class="step-tag">MECHANISM 1 / 3</div>
+    <h1 style="color:var(--off-white);">System Thinking</h1>
+    <p style="color:var(--off-white); margin-top:0.8em; max-width:60ch;">Every module teaches the full chain — not just 'recycling is good' but what happens at every stage.</p>
+    <div style="margin-top:1.2em; display:flex; flex-direction:column; gap:0.4em;">
+      <p style="color:var(--yellow); font-size:clamp(0.85rem,1.5vw,1.1rem);">Where does plastic come from? &nbsp;·&nbsp; How is it sorted? &nbsp;·&nbsp; What actually gets recycled? &nbsp;·&nbsp; What happens when it doesn't?</p>
+    </div>
+    <div class="divider"></div>
+    <p style="color:var(--off-white);">Kids learn to see the whole picture — not just the end result.</p>
+    <div class="notes">The full-chain approach is what makes the understanding stick. It's not a fact — it's a mental model.</div>
+  </section>
+
+  <!-- ── SLIDE 10 — Mechanism 2 ── -->
+  <section class="slide dark" id="slide-10">
+    <div class="step-tag">MECHANISM 2 / 3</div>
+    <h1 style="color:var(--off-white);">Real-World Grounding</h1>
+    <p style="color:var(--off-white); margin-top:0.8em; max-width:60ch;">We don't teach with hypotheticals. We teach with things your child already touches.</p>
+    <p style="color:var(--yellow); margin-top:1em; font-size:clamp(0.85rem,1.5vw,1.1rem);">Food packaging &nbsp;·&nbsp; Bottles &nbsp;·&nbsp; Paper &nbsp;·&nbsp; Electronics &nbsp;·&nbsp; Recycling symbols and what the numbers actually mean.</p>
+    <div class="divider"></div>
+    <p style="color:var(--off-white);">Better decisions at home — starting from Module 1.</p>
+    <div class="notes">Concrete beats abstract every time with kids. This is the "I can use this today" moment.</div>
+  </section>
+
+  <!-- ── SLIDE 11 — Mechanism 3 ── -->
+  <section class="slide dark" id="slide-11">
+    <div class="step-tag">MECHANISM 3 / 3</div>
+    <h1 style="color:var(--off-white);">Action-Oriented Outputs</h1>
+    <p style="color:var(--off-white); margin-top:0.8em; max-width:60ch;">Every module ends with something they can DO. Not just reflect on — do.</p>
+    <ul style="list-style:none; padding:0; margin-top:1.2em; display:flex; flex-direction:column; gap:0.6em;">
+      <li style="color:var(--yellow); font-size:clamp(0.9rem,1.5vw,1.15rem); padding-left:1.5em; position:relative;"><span style="position:absolute;left:0;color:var(--green);">→</span>A conversation to have</li>
+      <li style="color:var(--yellow); font-size:clamp(0.9rem,1.5vw,1.15rem); padding-left:1.5em; position:relative;"><span style="position:absolute;left:0;color:var(--green);">→</span>Something to check in their own home</li>
+      <li style="color:var(--yellow); font-size:clamp(0.9rem,1.5vw,1.15rem); padding-left:1.5em; position:relative;"><span style="position:absolute;left:0;color:var(--green);">→</span>A decision they can make differently tomorrow</li>
+    </ul>
+    <div class="divider"></div>
+    <p style="color:var(--off-white);">This is how awareness becomes behaviour.</p>
+    <div class="notes">This closes the loop on the paradigm shift. Understanding leads to action — not just feeling.</div>
+  </section>
+
+  <!-- ── SLIDE 12 — What It Looks Like ── -->
+  <section class="slide light" id="slide-12">
+    <div class="tag tag-green">INSIDE SCHOOL OF RECYCLING</div>
+    <h1 style="color:var(--ink);">17 self-paced modules. Your child works at their own pace.</h1>
+    <div class="cols" style="margin-top:1em;">
+      <div class="col">
+        <h3 style="color:var(--dark-green); font-family:Georgia,serif; font-size:clamp(0.8rem,1.3vw,1rem); font-weight:700; margin-bottom:0.6em; letter-spacing:0.05em;">AGES 6–9</h3>
+        <ul style="list-style:none; padding:0; display:flex; flex-direction:column; gap:0.35em;">
+          <li style="font-size:clamp(0.8rem,1.3vw,1rem); color:var(--ink);">Plastics</li>
+          <li style="font-size:clamp(0.8rem,1.3vw,1rem); color:var(--ink);">Paper &amp; Cardboard</li>
+          <li style="font-size:clamp(0.8rem,1.3vw,1rem); color:var(--ink);">Glass</li>
+          <li style="font-size:clamp(0.8rem,1.3vw,1rem); color:var(--ink);">What Gets Recycled?</li>
+          <li style="font-size:clamp(0.8rem,1.3vw,1rem); color:var(--ink);">The Ocean Problem</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3 style="color:var(--dark-green); font-family:Georgia,serif; font-size:clamp(0.8rem,1.3vw,1rem); font-weight:700; margin-bottom:0.6em; letter-spacing:0.05em;">AGES 10–12</h3>
+        <ul style="list-style:none; padding:0; display:flex; flex-direction:column; gap:0.35em;">
+          <li style="font-size:clamp(0.8rem,1.3vw,1rem); color:var(--ink);">The Circular Economy</li>
+          <li style="font-size:clamp(0.8rem,1.3vw,1rem); color:var(--ink);">E-Waste</li>
+          <li style="font-size:clamp(0.8rem,1.3vw,1rem); color:var(--ink);">The Plastic Chain</li>
+          <li style="font-size:clamp(0.8rem,1.3vw,1rem); color:var(--ink);">What Brands Don't Tell You</li>
+          <li style="font-size:clamp(0.8rem,1.3vw,1rem); color:var(--ink);">Taking Action</li>
+        </ul>
+      </div>
+    </div>
+    <div class="divider" style="background:var(--ink);"></div>
+    <p style="color:var(--dark-green); font-size:clamp(0.8rem,1.3vw,1rem);">No schedule. No login window. 100 days from the day you sign up.</p>
+    <div class="notes">Keep this brief — it's a teaser, not a curriculum tour.</div>
+  </section>
+
+  <!-- ── SLIDE 13 — Commitment ── -->
+  <section class="slide dark" id="slide-13">
+    <h1 style="color:var(--off-white);">Quick check-in. Nod along if this resonates:</h1>
+    <ul class="yes-list" style="margin-top:1em;">
+      <li>Your child knows recycling exists — but couldn't explain why it matters beyond "it's better for the planet."</li>
+      <li>You've tried environmental topics but found it hard to make them stick.</li>
+      <li>You'd love your child to finish this summer having actually learned something that changes how they move through the world.</li>
+    </ul>
+    <p style="color:var(--off-white); opacity:0.7; margin-top:1.2em; font-size:clamp(0.8rem,1.3vw,1rem); max-width:55ch;">If that's you — what I'm about to show you was built for exactly this.</p>
+    <div class="notes">Pause between each one. These are micro-yeses. Each yes makes the purchase yes easier.</div>
+  </section>
+
+  <!-- ── SLIDE 14 — Transition ── -->
+  <section class="slide dark" id="slide-14">
+    <h1 style="color:var(--off-white);">You now know:</h1>
+    <ul class="recap-list" style="margin-top:1em;">
+      <li>Why awareness without structure doesn't build real change</li>
+      <li>The 3 mechanisms that turn knowledge into behaviour</li>
+      <li>Why summer is the best possible time to start</li>
+    </ul>
+    <div class="divider"></div>
+    <p class="big-statement" style="color:var(--yellow); font-size:clamp(1.1rem,2.2vw,1.9rem); max-width:55ch;">Now let me show you exactly how to put this in motion — starting this week.</p>
+    <div class="notes">Call back everything you've covered. This reframes what's coming as the logical conclusion — not a sales pitch.</div>
+  </section>
+
+  <!-- ── SLIDE 15 — The Offer ── -->
+  <section class="slide yellow" id="slide-15">
+    <div class="tag tag-dark">THE OFFER</div>
+    <h1 style="color:var(--dark-green);">School of Recycling — Summer Homeschool Access</h1>
+    <ul style="list-style:none; padding:0; margin-top:1em; display:flex; flex-direction:column; gap:0.55em;">
+      <li style="font-size:clamp(0.85rem,1.5vw,1.1rem); color:var(--dark-green); padding-left:1.5em; position:relative;"><span style="position:absolute;left:0;color:var(--green);font-weight:700;">✓</span>17 self-paced modules</li>
+      <li style="font-size:clamp(0.85rem,1.5vw,1.1rem); color:var(--dark-green); padding-left:1.5em; position:relative;"><span style="position:absolute;left:0;color:var(--green);font-weight:700;">✓</span>Ages 6–9 and 10–12 (separate curriculum paths)</li>
+      <li style="font-size:clamp(0.85rem,1.5vw,1.1rem); color:var(--dark-green); padding-left:1.5em; position:relative;"><span style="position:absolute;left:0;color:var(--green);font-weight:700;">✓</span>100 days access from the day you sign up</li>
+      <li style="font-size:clamp(0.85rem,1.5vw,1.1rem); color:var(--dark-green); padding-left:1.5em; position:relative;"><span style="position:absolute;left:0;color:var(--green);font-weight:700;">✓</span>Works independently or alongside any homeschool curriculum</li>
+      <li style="font-size:clamp(0.85rem,1.5vw,1.1rem); color:var(--dark-green); padding-left:1.5em; position:relative;"><span style="position:absolute;left:0;color:var(--green);font-weight:700;">✓</span>No schedule, no pressure, no expiry during your 100 days</li>
+    </ul>
+    <div class="divider" style="background:var(--dark-green);"></div>
+    <p style="color:var(--dark-green); font-size:clamp(0.8rem,1.3vw,1rem); opacity:0.75;">The equivalent in private tutoring or structured programmes? Easily £150+</p>
+    <div class="notes">Present value BEFORE price. They should be mentally bracing for a high price before you reveal $37.</div>
+  </section>
+
+  <!-- ── SLIDE 16 — Price ── -->
+  <section class="slide yellow" id="slide-16">
+    <h1 style="color:var(--dark-green);">We've priced it to be a yes — not a decision.</h1>
+    <div class="big-price">$37</div>
+    <p style="color:var(--dark-green); font-size:clamp(0.9rem,1.6vw,1.2rem); margin-top:0.3em;">100 days &nbsp;·&nbsp; Both age groups included &nbsp;·&nbsp; Instant access</p>
+    <p style="color:var(--dark-green); opacity:0.75; font-size:clamp(0.8rem,1.3vw,1rem); margin-top:0.8em;">One family subscription covers all your children aged 6–12.</p>
+    <div class="notes">Pause after the $37. Let the contrast between expected price and actual price do the work.</div>
+  </section>
+
+  <!-- ── SLIDE 17 — Bonus 1 ── -->
+  <section class="slide dark" id="slide-17">
+    <div class="tag tag-green">BONUS — FOR WEBINAR FAMILIES ONLY</div>
+    <h1 style="color:var(--yellow);">Waste Detective Family Field Kit</h1>
+    <p style="color:var(--off-white); margin-top:0.5em; font-size:clamp(0.9rem,1.5vw,1.1rem);">Normally $17 — yours free when you sign up through this session</p>
+    <p style="color:var(--off-white); margin-top:1em; max-width:60ch;">A hands-on activity kit for families — waste audits, sorting games, investigation challenges. The single most effective way to make the curriculum stick in real life.</p>
+    <div class="callout-yellow" style="margin-top:1.5em; display:inline-block; padding:0.5em 1.2em;">
+      <span style="font-weight:700; font-size:clamp(0.85rem,1.4vw,1rem);">Value: $17 &nbsp;·&nbsp; Free for you today</span>
+    </div>
+    <div class="notes">This is the bonus that removes the "will it actually be hands-on?" objection.</div>
+  </section>
+
+  <!-- ── SLIDE 18 — Bonus 2 ── -->
+  <section class="slide dark" id="slide-18">
+    <div class="tag tag-green">BONUS 2 — INCLUDED</div>
+    <h1 style="color:var(--yellow);">How Plastic Works</h1>
+    <p style="color:var(--off-white); margin-top:0.5em; font-size:clamp(0.9rem,1.5vw,1.1rem);">A free worksheet normally given at signup — included here</p>
+    <p style="color:var(--off-white); margin-top:1em; max-width:60ch;">A clear, visual explainer your child can work through in 20 minutes. The perfect first session before they open Module 1.</p>
+    <div class="notes">Keep this brief. It adds perceived value without needing much explanation.</div>
+  </section>
+
+  <!-- ── SLIDE 19 — Stack Summary ── -->
+  <section class="slide yellow" id="slide-19">
+    <h1 style="color:var(--dark-green);">Here's what you get today:</h1>
+    <div style="margin-top:1em;">
+      <div class="stack-item">
+        <span style="color:var(--dark-green);"><strong>✓</strong> School of Recycling — 100 days access</span>
+        <span class="price-label" style="color:var(--dark-green);">$37</span>
+      </div>
+      <div class="stack-item">
+        <span style="color:var(--dark-green);"><strong>✓</strong> Waste Detective Family Field Kit</span>
+        <span class="price-label" style="color:var(--green);">FREE <span style="opacity:0.6; font-weight:400;">($17 value)</span></span>
+      </div>
+      <div class="stack-item">
+        <span style="color:var(--dark-green);"><strong>✓</strong> How Plastic Works worksheet</span>
+        <span class="price-label" style="color:var(--green);">FREE</span>
+      </div>
+    </div>
+    <div class="divider" style="background:var(--dark-green); margin-top:1.2em;"></div>
+    <p style="color:var(--dark-green); opacity:0.7; font-size:clamp(0.8rem,1.3vw,0.95rem);">Total value: $54+</p>
+    <p style="font-family:Georgia,serif; font-size:clamp(1.4rem,3.5vw,3rem); font-weight:700; color:var(--dark-green); margin-top:0.15em;">Your investment today: $37</p>
+    <div class="notes">The stack makes the $37 feel like a no-brainer. Let it sit for a moment.</div>
+  </section>
+
+  <!-- ── SLIDE 20 — Risk Reversal ── -->
+  <section class="slide dark" id="slide-20">
+    <h1 style="color:var(--yellow); max-width:22ch;">What if my child doesn't engage with it?</h1>
+    <p style="color:var(--off-white); margin-top:0.8em; max-width:60ch;">At $37 for 100 days, the risk is almost entirely on our side. We've priced it this way deliberately.</p>
+    <div class="divider"></div>
+    <p style="color:var(--off-white); max-width:60ch;">Families who complete even the first three modules consistently report a noticeable shift in how their child talks about waste.</p>
+    <p style="color:var(--green); margin-top:1em; font-size:clamp(0.85rem,1.4vw,1.05rem); font-weight:600;">If it's genuinely not working — reach out. We stand behind what we've built.</p>
+    <div class="notes">Name the fear before they voice it. Address it directly. The low price IS the guarantee.</div>
+  </section>
+
+  <!-- ── SLIDE 21 — Scarcity ── -->
+  <section class="slide dark" id="slide-21">
+    <div class="tag tag-yellow">IMPORTANT</div>
+    <h1 style="color:var(--off-white); max-width:22ch;">The bonuses are only available through this session.</h1>
+    <p style="color:var(--off-white); margin-top:0.8em; max-width:60ch;">The Waste Detective Family Field Kit and the How Plastic Works worksheet are included free for families who sign up before August 31.</p>
+    <p style="color:var(--yellow); margin-top:1em; max-width:60ch;">After that, this is a summer-specific offer. Once September hits, these bonuses aren't relevant — so we're not including them.</p>
+    <div class="divider"></div>
+    <p style="color:var(--off-white); opacity:0.8; font-size:clamp(0.8rem,1.3vw,1rem);">The curriculum is still available after August 31. The bonuses aren't.</p>
+    <div class="notes">This scarcity is real — the summer kit doesn't make sense in October. Never fake scarcity. Your audience will feel the difference.</div>
+  </section>
+
+  <!-- ── SLIDE 22 — CTA ── -->
+  <section class="slide yellow" id="slide-22">
+    <h1 style="color:var(--dark-green);">Ready to get started?</h1>
+    <div class="big-url">schoolofrecycling.com</div>
+    <ol style="list-style:none; padding:0; margin-top:0.5em; display:flex; flex-direction:column; gap:0.5em;">
+      <li style="font-size:clamp(0.85rem,1.5vw,1.1rem); color:var(--dark-green);">1. Go to <strong>schoolofrecycling.com</strong></li>
+      <li style="font-size:clamp(0.85rem,1.5vw,1.1rem); color:var(--dark-green);">2. Click "Get Started"</li>
+      <li style="font-size:clamp(0.85rem,1.5vw,1.1rem); color:var(--dark-green);">3. Choose your child's age group (6–9 or 10–12)</li>
+      <li style="font-size:clamp(0.85rem,1.5vw,1.1rem); color:var(--dark-green);">4. Instant access — your child can start Module 1 today</li>
+    </ol>
+    <p style="color:var(--dark-green); opacity:0.65; margin-top:1em; font-size:clamp(0.8rem,1.3vw,0.95rem);">Takes about 2 minutes.</p>
+    <div class="notes">State this clearly. "Takes about 2 minutes" removes the fear of a complicated checkout.</div>
+  </section>
+
+  <!-- ── SLIDE 23 — Close ── -->
+  <section class="slide dark centered" id="slide-23">
+    <p style="font-family:Georgia,serif; font-size:clamp(2.5rem,7vw,6.5rem); color:var(--yellow); font-weight:700; line-height:1.1; text-align:center;">I'll see you inside.</p>
+    <p style="color:var(--off-white); margin-top:1em; opacity:0.85; text-align:center; font-size:clamp(0.85rem,1.5vw,1.1rem);">schoolofrecycling.com &nbsp;·&nbsp; Summer Edition &nbsp;·&nbsp; Open until August 31</p>
+    <p style="color:var(--off-white); margin-top:1.5em; opacity:0.5; font-size:clamp(0.75rem,1.2vw,0.9rem); text-align:center;">Questions? Drop them in the chat.</p>
+    <div class="notes">End with confidence, not hesitation. Don't over-explain. Let the offer stand.</div>
+  </section>
+
+</div><!-- /#deck -->
+
+<!-- Progress bar -->
+<div id="progress" style="width:0%"></div>
+
+<!-- Slide counter -->
+<div id="counter">1 / 23</div>
+
+<!-- Notes panel -->
+<div id="notes-panel">
+  <strong>Speaker Notes</strong>
+  <span id="notes-text"></span>
+</div>
+
+<script>
+(function () {
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  const progress = document.getElementById('progress');
+  const counter = document.getElementById('counter');
+  const notesPanel = document.getElementById('notes-panel');
+  const notesText = document.getElementById('notes-text');
+  let current = 0;
+  let notesVisible = false;
+
+  function getNote(idx) {
+    const n = slides[idx].querySelector('.notes');
+    return n ? n.textContent.trim() : '';
+  }
+
+  function show(idx) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(total - 1, idx));
+    slides[current].classList.add('active');
+    progress.style.width = ((current + 1) / total * 100) + '%';
+    counter.textContent = (current + 1) + ' / ' + total;
+    if (notesVisible) {
+      notesText.textContent = getNote(current);
+    }
+  }
+
+  function next() { if (current < total - 1) show(current + 1); }
+  function prev() { if (current > 0) show(current - 1); }
+
+  function toggleNotes() {
+    notesVisible = !notesVisible;
+    if (notesVisible) {
+      notesText.textContent = getNote(current);
+      notesPanel.classList.add('visible');
+    } else {
+      notesPanel.classList.remove('visible');
+    }
+  }
+
+  document.addEventListener('keydown', function (e) {
+    switch (e.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+      case ' ':
+        e.preventDefault();
+        next();
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        e.preventDefault();
+        prev();
+        break;
+      case 'n':
+      case 'N':
+        toggleNotes();
+        break;
+    }
+  });
+
+  // Touch / swipe support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', function (e) {
+    touchStartX = e.changedTouches[0].screenX;
+  }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    const dx = e.changedTouches[0].screenX - touchStartX;
+    if (Math.abs(dx) > 40) dx < 0 ? next() : prev();
+  }, { passive: true });
+
+  // Init
+  show(0);
+})();
+</script>
+</body>
+</html>

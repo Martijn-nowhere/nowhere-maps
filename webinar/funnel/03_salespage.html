@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>School of Recycling — Get Instant Access</title>
+  <style>
+    /* ── Reset & base ───────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --yellow:     #eaff94;
+      --green:      #0db762;
+      --dark-green: #085030;
+      --off-white:  #f8f8f0;
+      --ink:        #1a1a1a;
+    }
+
+    body {
+      background: var(--off-white);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 17px;
+      line-height: 1.65;
+    }
+
+    h1, h2, h3 {
+      font-family: Georgia, 'Times New Roman', serif;
+      line-height: 1.2;
+    }
+
+    a { color: var(--dark-green); }
+
+    /* ── Layout helpers ─────────────────────────────── */
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    section {
+      padding: 56px 0;
+    }
+
+    section + section {
+      border-top: 1px solid #d8d8cc;
+    }
+
+    /* ── CTA button ─────────────────────────────────── */
+    .btn {
+      display: inline-block;
+      background: var(--green);
+      color: #fff;
+      font-family: system-ui, sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      text-decoration: none;
+      padding: 16px 36px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: var(--dark-green); }
+
+    .btn-large {
+      font-size: 1.2rem;
+      padding: 20px 48px;
+    }
+
+    .btn-wrap {
+      text-align: center;
+      margin-top: 32px;
+    }
+
+    /* ── Top bar ────────────────────────────────────── */
+    .topbar {
+      background: var(--dark-green);
+      color: var(--yellow);
+      text-align: center;
+      padding: 10px 20px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Hero ───────────────────────────────────────── */
+    .hero {
+      background: var(--dark-green);
+      color: var(--off-white);
+      padding: 72px 0 64px;
+      border-top: none;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      color: var(--yellow);
+      margin-bottom: 20px;
+    }
+
+    .hero p.sub {
+      font-size: 1.15rem;
+      max-width: 580px;
+      margin-bottom: 36px;
+      opacity: 0.92;
+    }
+
+    .hero .price-tag {
+      display: inline-block;
+      background: var(--yellow);
+      color: var(--dark-green);
+      font-family: Georgia, serif;
+      font-size: 1.4rem;
+      font-weight: bold;
+      padding: 6px 18px;
+      border-radius: 4px;
+      margin-bottom: 28px;
+    }
+
+    /* ── Section headings ───────────────────────────── */
+    .section-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      color: var(--dark-green);
+      margin-bottom: 24px;
+    }
+
+    /* ── What's inside ──────────────────────────────── */
+    .inside-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 28px;
+    }
+
+    @media (max-width: 560px) {
+      .inside-grid { grid-template-columns: 1fr; }
+    }
+
+    .inside-card {
+      background: #fff;
+      border: 1px solid #d8d8cc;
+      border-radius: 8px;
+      padding: 24px 22px;
+    }
+
+    .inside-card h3 {
+      font-size: 1.05rem;
+      color: var(--dark-green);
+      margin-bottom: 8px;
+    }
+
+    .inside-card p {
+      font-size: 0.95rem;
+      color: #3a3a3a;
+    }
+
+    /* ── Bonus stack ────────────────────────────────── */
+    .bonus-section {
+      background: var(--yellow);
+    }
+
+    .bonus-section .section-label { color: var(--dark-green); }
+
+    .bonus-box {
+      background: #fff;
+      border: 2px solid var(--dark-green);
+      border-radius: 8px;
+      padding: 24px 24px;
+      margin-bottom: 16px;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .bonus-badge {
+      flex-shrink: 0;
+      background: var(--green);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-top: 4px;
+    }
+
+    .bonus-text h3 {
+      font-size: 1.05rem;
+      color: var(--dark-green);
+      margin-bottom: 6px;
+    }
+
+    .bonus-text p {
+      font-size: 0.95rem;
+      color: #3a3a3a;
+    }
+
+    .bonus-strikethrough {
+      font-size: 0.88rem;
+      color: #666;
+      margin-top: 6px;
+    }
+
+    .bonus-strikethrough s { color: #999; }
+
+    /* ── Who it's for ───────────────────────────────── */
+    .paths {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 28px;
+    }
+
+    @media (max-width: 560px) {
+      .paths { grid-template-columns: 1fr; }
+    }
+
+    .path-card {
+      background: var(--dark-green);
+      color: var(--off-white);
+      border-radius: 8px;
+      padding: 28px 24px;
+    }
+
+    .path-card .age-badge {
+      display: inline-block;
+      background: var(--yellow);
+      color: var(--dark-green);
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    .path-card h3 {
+      font-size: 1.05rem;
+      margin-bottom: 10px;
+      color: var(--yellow);
+    }
+
+    .path-card ul {
+      padding-left: 18px;
+      font-size: 0.95rem;
+    }
+
+    .path-card ul li { margin-bottom: 6px; }
+
+    /* ── Risk reversal ──────────────────────────────── */
+    .risk-section {
+      background: #fff;
+    }
+
+    /* ── Scarcity block ─────────────────────────────── */
+    .scarcity-section {
+      background: var(--dark-green);
+      color: var(--off-white);
+    }
+
+    .scarcity-section .section-title { color: var(--yellow); }
+
+    .deadline-box {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(234,255,148,0.4);
+      border-radius: 8px;
+      padding: 24px;
+      margin-top: 24px;
+    }
+
+    .deadline-box p { font-size: 0.97rem; }
+
+    /* ── Final CTA ──────────────────────────────────── */
+    .final-cta {
+      background: var(--off-white);
+      text-align: center;
+    }
+
+    .final-cta .price-display {
+      font-family: Georgia, serif;
+      font-size: 2.2rem;
+      font-weight: bold;
+      color: var(--dark-green);
+      margin: 16px 0 4px;
+    }
+
+    .final-cta .price-note {
+      font-size: 0.9rem;
+      color: #555;
+      margin-bottom: 28px;
+    }
+
+    .final-cta .section-title { margin-bottom: 8px; }
+
+    /* ── Footer ─────────────────────────────────────── */
+    footer {
+      background: var(--ink);
+      color: #999;
+      text-align: center;
+      padding: 28px 20px;
+      font-size: 0.85rem;
+    }
+
+    footer a { color: #bbb; }
+
+    /* ── Utility ────────────────────────────────────── */
+    .check-list {
+      list-style: none;
+      padding: 0;
+      margin-top: 16px;
+    }
+
+    .check-list li {
+      padding: 8px 0 8px 32px;
+      position: relative;
+      border-bottom: 1px solid #eee;
+    }
+
+    .check-list li:last-child { border-bottom: none; }
+
+    .check-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: var(--green);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top scarcity bar -->
+  <div class="topbar">
+    Bonuses close August 31 — the curriculum stays open, but the free Field Kit won't be included after that date.
+  </div>
+
+  <!-- ── 1. HERO ─────────────────────────────────── -->
+  <section class="hero">
+    <div class="container">
+      <h1>Give your kids 100 days of real environmental science — built for home.</h1>
+      <p class="sub">
+        School of Recycling is a structured curriculum for ages 6–12. Two age-matched paths.
+        Hands-on activities. No prep required beyond a printer.
+      </p>
+      <div class="price-tag">$37 — 100 days access</div>
+      <div>
+        <a href="#checkout" class="btn btn-large">Get Instant Access</a>
+      </div>
+      <p style="margin-top:16px; font-size:0.88rem; opacity:0.7;">
+        One family subscription covers all your kids aged 6–12.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── 2. WHAT'S INSIDE ───────────────────────── -->
+  <section>
+    <div class="container">
+      <div class="section-label">The curriculum</div>
+      <h2 class="section-title">Here's what's inside School of Recycling</h2>
+      <p>Two complete curriculum paths — one for ages 6–9, one for 10–12 — each structured around the same core science but taught at the right depth for each age group. One subscription covers both.</p>
+
+      <div class="inside-grid">
+        <div class="inside-card">
+          <h3>Structured lessons</h3>
+          <p>Step-by-step sessions that build on each other. Each lesson has a goal, an activity, and a wrap-up question.</p>
+        </div>
+        <div class="inside-card">
+          <h3>Printable materials</h3>
+          <p>Worksheets, field cards, and reference sheets ready to print. No subscription to an additional platform needed.</p>
+        </div>
+        <div class="inside-card">
+          <h3>Real-world focus</h3>
+          <p>Lessons are built around things kids encounter — bins, packaging, grocery runs, parks. Not hypothetical scenarios.</p>
+        </div>
+        <div class="inside-card">
+          <h3>100 days of access</h3>
+          <p>Work through it at your own pace. Most families go at one or two sessions a week — the 100 days gives you room to breathe.</p>
+        </div>
+      </div>
+
+      <ul class="check-list" style="margin-top:32px;">
+        <li>Ages 6–9 path: concrete activities, simple classification, sensory-friendly materials</li>
+        <li>Ages 10–12 path: systems thinking, material science basics, critical analysis of claims</li>
+        <li>Both paths: designed for one parent and multiple kids at the same time</li>
+        <li>No prior science background needed — everything is explained for the parent too</li>
+        <li>Access starts the day you purchase — no waiting for a term start</li>
+      </ul>
+
+      <div class="btn-wrap">
+        <a href="#checkout" class="btn">Get Instant Access — $37</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 3. BONUS STACK ─────────────────────────── -->
+  <section class="bonus-section">
+    <div class="container">
+      <div class="section-label">Free bonuses — available until August 31</div>
+      <h2 class="section-title">Two extras included at no charge right now</h2>
+
+      <div class="bonus-box">
+        <div class="bonus-badge">Free</div>
+        <div class="bonus-text">
+          <h3>Waste Detective Family Field Kit</h3>
+          <p>
+            A printable activity kit your kids use out in the world — on walks, at the supermarket, sorting the kitchen bin.
+            It turns the curriculum into something they do, not just read.
+          </p>
+          <p class="bonus-strikethrough">Normal price: <s>$17</s> — free for purchases made before August 31.</p>
+        </div>
+      </div>
+
+      <div class="bonus-box">
+        <div class="bonus-badge">Free</div>
+        <div class="bonus-text">
+          <h3>"How Plastic Works" Worksheet</h3>
+          <p>
+            A single-page illustrated explainer covering plastic types, what can and can't be recycled, and why.
+            Designed for kids to reference on their own — not just a parent handout.
+          </p>
+          <p class="bonus-strikethrough">Included free with every purchase.</p>
+        </div>
+      </div>
+
+      <p style="font-size:0.9rem; margin-top:8px; color:#333;">
+        Both bonuses are included automatically. No codes. No extra steps.
+      </p>
+
+      <div class="btn-wrap">
+        <a href="#checkout" class="btn">Claim Your Bonuses — Get Access Now</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 4. WHO IT'S FOR ────────────────────────── -->
+  <section>
+    <div class="container">
+      <div class="section-label">Two age paths, one subscription</div>
+      <h2 class="section-title">Built for the ages your kids actually are</h2>
+      <p>
+        Most environmental curriculum either talks down to older kids or goes over younger ones' heads.
+        School of Recycling has two distinct tracks so each child works at the right level — even if they're doing sessions side by side.
+      </p>
+
+      <div class="paths">
+        <div class="path-card">
+          <div class="age-badge">Ages 6–9</div>
+          <h3>Foundation Path</h3>
+          <ul>
+            <li>Hands-on sorting and identifying activities</li>
+            <li>Picture-based worksheets</li>
+            <li>Short sessions (15–25 min)</li>
+            <li>Builds vocabulary and observational skills</li>
+            <li>Designed to do alongside a parent</li>
+          </ul>
+        </div>
+        <div class="path-card">
+          <div class="age-badge">Ages 10–12</div>
+          <h3>Explorer Path</h3>
+          <ul>
+            <li>Deeper material science concepts</li>
+            <li>Research and critical thinking tasks</li>
+            <li>Longer sessions (25–40 min)</li>
+            <li>Introduces systems and supply chains</li>
+            <li>More independent work with check-ins</li>
+          </ul>
+        </div>
+      </div>
+
+      <p style="margin-top:28px; font-size:0.95rem;">
+        If you have kids in both age groups, they can run both paths simultaneously on the same subscription —
+        you're not paying twice.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── 5. RISK REVERSAL ───────────────────────── -->
+  <section class="risk-section">
+    <div class="container">
+      <div class="section-label">Our commitment to you</div>
+      <h2 class="section-title">If it's not what you expected, say so.</h2>
+      <p>
+        We'd rather you feel good about this than hold onto $37 and have you stop after lesson two.
+        If you work through the first few sessions and it's not a fit for your family, email us
+        within 14 days and we'll refund you in full — no form to fill, no questions that feel like interrogation.
+      </p>
+      <p style="margin-top:16px;">
+        What we ask: give it a genuine try first. The curriculum is designed to build, so
+        jumping around won't give you an accurate read on whether it works.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── 6. SCARCITY BLOCK ──────────────────────── -->
+  <section class="scarcity-section">
+    <div class="container">
+      <div class="section-label">Important</div>
+      <h2 class="section-title">The bonuses close August 31. The curriculum doesn't.</h2>
+      <div class="deadline-box">
+        <p>
+          School of Recycling is available year-round. The $37 price and 100-day access aren't going anywhere.
+          But the <strong>Waste Detective Family Field Kit</strong> is a summer offer — it was designed to be used
+          over the long school break when families have more time outside.
+        </p>
+        <p style="margin-top:12px;">
+          After August 31, new purchases won't include the Field Kit.
+          If you're on the fence, the practical reason to decide now is that bonus — not a countdown timer.
+        </p>
+        <p style="margin-top:12px; font-style:italic; opacity:0.85;">
+          No fake deadlines here. The date is August 31 because that's when the summer offer ends.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 7. FINAL CTA + PRICE ───────────────────── -->
+  <section class="final-cta" id="checkout">
+    <div class="container">
+      <div class="section-label">Ready to get started?</div>
+      <h2 class="section-title">Get School of Recycling today</h2>
+
+      <ul class="check-list" style="text-align:left; max-width:480px; margin:0 auto 24px;">
+        <li>Full curriculum — ages 6–9 and 10–12</li>
+        <li>100 days access from date of purchase</li>
+        <li>One subscription covers the whole family</li>
+        <li>Waste Detective Family Field Kit (free until Aug 31)</li>
+        <li>"How Plastic Works" worksheet (always free)</li>
+        <li>14-day guarantee</li>
+      </ul>
+
+      <div class="price-display">$37</div>
+      <div class="price-note">One-time payment. No recurring charges.</div>
+
+      <a href="#checkout" class="btn btn-large">Get Instant Access — $37</a>
+
+      <p style="margin-top:20px; font-size:0.88rem; color:#666;">
+        You'll receive login details by email immediately after checkout.<br />
+        Questions? Email us at hello@schoolofrecycling.com
+      </p>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ─────────────────────────────────── -->
+  <footer>
+    <p>
+      &copy; 2026 School of Recycling &mdash;
+      <a href="https://schoolofrecycling.com">schoolofrecycling.com</a>
+    </p>
+    <p style="margin-top:6px;">
+      Your details are handled with care. We don't sell or share them.
+    </p>
+  </footer>
+
+</body>
+</html>
