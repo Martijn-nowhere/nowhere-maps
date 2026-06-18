@@ -271,53 +271,6 @@ EMAIL_CAMPAIGN_EMAILS = [
 ]
 
 
-def create_email_campaign(api_key: str) -> str | None:
-    """Create the email campaign and return its ID, or None on failure."""
-    print("\n[3/3] Creating email campaign...")
-    status, data = api_request(
-        "POST", "/email-campaigns", api_key,
-        {"name": "SoR Webinar — Summer Edition"}
-    )
-    result = check_response("Create email campaign", status, data, expected=201)
-    if result is None:
-        return None
-    campaign_id = str(result.get("id", ""))
-    print(f"  [OK]  Campaign created — ID: {campaign_id}")
-    return campaign_id
-
-
-def create_campaign_emails(api_key: str, campaign_id: str) -> list[dict]:
-    """Add all 5 emails to the campaign. Returns list of created email records."""
-    print("\n      Adding emails to campaign...")
-    created = []
-    for email in EMAIL_CAMPAIGN_EMAILS:
-        payload = {
-            "subject": email["subject"],
-            "body": email["body"],
-            "delayValue": email["delayValue"],
-            "delayType": email["delayType"],
-        }
-        status, data = api_request(
-            "POST", f"/email-campaigns/{campaign_id}/emails", api_key, payload
-        )
-        result = check_response(f"  Add '{email['label']}'", status, data, expected=201)
-        email_id = None
-        if result is not None:
-            email_id = str(result.get("id", ""))
-            print(f"  [OK]  '{email['label']}' — ID: {email_id}")
-        else:
-            print(f"  [--]  '{email['label']}' was not created — see error above")
-
-        if email.get("note"):
-            print(f"\n  [NOTE] {email['note']}\n")
-
-        created.append({
-            "label": email["label"],
-            "subject": email["subject"],
-            "id": email_id,
-        })
-    return created
-
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 
@@ -366,6 +319,23 @@ def print_summary(
     print(f"\n{divider}\n")
 
 
+# ── Email instructions (API not supported) ───────────────────────────────────
+
+def print_email_instructions() -> None:
+    divider = "─" * 60
+    print(f"\n{divider}")
+    print("[3/3] Email campaigns — manual setup required")
+    print(f"{divider}")
+    print("  systeme.io does not expose email campaigns via API.")
+    print("  Create the campaign manually in systeme.io UI.")
+    print("  All 5 email bodies are in: webinar/emails/sequences.md\n")
+    for i, email in enumerate(EMAIL_CAMPAIGN_EMAILS, 1):
+        print(f"  Email {i}: {email['subject']}")
+        if email.get("note"):
+            print(f"    Note: {email['note']}")
+    print()
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -391,17 +361,13 @@ def main() -> None:
         print("  [SKIP] Cannot create funnel steps without a funnel ID.")
         steps = [{"name": s["name"], "stepType": s["stepType"], "id": None} for s in FUNNEL_STEPS]
 
-    # Step 2: Create email campaign
-    campaign_id = create_email_campaign(api_key)
-    emails: list[dict] = []
-    if campaign_id:
-        emails = create_campaign_emails(api_key, campaign_id)
-    else:
-        print("  [SKIP] Cannot create emails without a campaign ID.")
-        emails = [{"label": e["label"], "subject": e["subject"], "id": None} for e in EMAIL_CAMPAIGN_EMAILS]
+    # Email campaigns are not available via the systeme.io API.
+    # Print all email content so it can be pasted manually.
+    print_email_instructions()
 
     # Summary
-    print_summary(funnel_id, steps, campaign_id, emails)
+    emails = [{"label": e["label"], "subject": e["subject"], "id": None} for e in EMAIL_CAMPAIGN_EMAILS]
+    print_summary(funnel_id, steps, None, emails)
 
 
 if __name__ == "__main__":
