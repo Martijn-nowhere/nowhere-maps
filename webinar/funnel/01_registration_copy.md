@@ -31,12 +31,12 @@ Join this free live webinar and find out how to turn that question into a genuin
 
 **This webinar is for you if:**
 
-- You homeschool kids aged 6–9, 10–12, or both
-- You want environmental science to feel real — not like a worksheet subject
-- You're tired of curriculum that's either too preachy or too thin on content
-- You'd love something the whole family does together, not another solo screen session
+- Your kids have a screen in front of them this summer — and you'd rather it taught them something real
+- You want your child to actually learn during the break, not just pass time
+- Your kids are aged 6–12 and you're looking for something engaging they can do independently
+- You care about the environment but don't want to guilt-trip your kids into caring too
 
-Not a fit: this is curriculum-focused. If your kids are under 6 or over 12, the material won't be the right level.
+Not a fit: if your kids are under 6 or over 12, the material won't land at the right level.
 
 ---
 
