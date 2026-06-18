@@ -114,10 +114,10 @@ def check_response(
 # ── Funnel creation ───────────────────────────────────────────────────────────
 
 FUNNEL_STEPS = [
-    {"name": "Registration",  "stepType": "squeeze_page"},
-    {"name": "Thank You",     "stepType": "thank_you_page"},
-    {"name": "Sales / Replay","stepType": "sales_page"},
-    {"name": "Checkout",      "stepType": "order_form"},
+    {"name": "Registration",  "type": "squeeze_page"},
+    {"name": "Thank You",     "type": "thank_you_page"},
+    {"name": "Sales / Replay","type": "sales_page"},
+    {"name": "Checkout",      "type": "order_form"},
 ]
 
 
