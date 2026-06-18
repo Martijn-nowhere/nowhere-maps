@@ -14,15 +14,13 @@ rather than attempted — the script will never invent endpoints.
 import os
 import sys
 import json
-import http.client
-import urllib.parse
 from pathlib import Path
 
+import requests as _requests
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-BASE_URL = "api.systeme.io"
-API_PATH_PREFIX = "/api"
+BASE_URL = "https://api.systeme.io/api"
 
 
 # ── .env loader (no dependencies required) ───────────────────────────────────
@@ -67,33 +65,28 @@ def api_request(
         "X-API-Key": api_key,
         "Content-Type": "application/json",
         "Accept": "application/json",
+        "User-Agent": "SoR-Webinar-Setup/1.0",
     }
 
-    encoded_body: bytes | None = None
-    if body is not None:
-        encoded_body = json.dumps(body).encode("utf-8")
-        headers["Content-Length"] = str(len(encoded_body))
-
-    conn = http.client.HTTPSConnection(BASE_URL, timeout=15)
     try:
-        conn.request(method, API_PATH_PREFIX + path, body=encoded_body, headers=headers)
-        response = conn.getresponse()
-        raw = response.read().decode("utf-8")
-        status = response.status
-
+        response = _requests.request(
+            method,
+            BASE_URL + path,
+            headers=headers,
+            json=body,
+            timeout=15,
+        )
+        status = response.status_code
         parsed = None
-        if raw.strip():
+        if response.text.strip():
             try:
-                parsed = json.loads(raw)
-            except json.JSONDecodeError:
-                parsed = {"_raw": raw}
-
+                parsed = response.json()
+            except Exception:
+                parsed = {"_raw": response.text}
         return status, parsed
-    except OSError as exc:
+    except _requests.RequestException as exc:
         print(f"[ERROR] Network error calling {method} {path}: {exc}")
         return 0, None
-    finally:
-        conn.close()
 
 
 def check_response(
