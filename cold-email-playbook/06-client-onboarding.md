@@ -1,104 +1,131 @@
-# Step 6 — Client Onboarding
+# Step 6 — Client Onboarding & Handover
 
-## What You Need from the Client Before Starting
+## Principle
 
-- [ ] Brand domain name (e.g. clientbrand.com)
-- [ ] Access to their domain registrar (GoDaddy or other) — OR permission to add DNS records yourself
-- [ ] Their main email address (for Reply-To and DMARC reports)
-- [ ] Preferred sending name style (generic first names + brand abbreviation as last name)
-- [ ] Credit card for tool subscriptions (or agree to bill separately)
-- [ ] Brief on their offer: what are they selling, who is the target, what's the CTA
+Every account, subscription, and domain should be owned by the client from day one. You set it up, they own it. That way handover is clean and you are never stuck as the middleman for billing or access.
 
-## DNS Access Options
+---
 
-**Option A — Client does it**
-You send exact records (copy-paste from `01-domains-dns.md`). They add in GoDaddy.
-- Slower (back and forth)
-- GoDaddy sends SMS verification to their phone for each change
-- Good if client prefers to keep control
+## Account Ownership Rules
 
-**Option B — You get added as admin**
-Client adds you as a GoDaddy delegate user.
-- Faster
-- You still trigger their SMS verification on changes
-- Ask them to be available on phone/WhatsApp during DNS setup session (30 min)
+| Tool | Account owner | Notes |
+|------|--------------|-------|
+| GoDaddy (sending domains) | Client | Buy domains on their account, not yours |
+| Google Workspace | Client | New account separate from existing Workspace |
+| Instantly | Client | Their own account, you get added as team member |
+| Apollo | Client | Their account, you get added as user |
 
-**Option C — You handle everything**
-Buy the sending domains on your own GoDaddy account.
-- Fastest
-- You control DNS fully, no SMS friction
-- Add client credit card to the account for billing, or invoice them separately
-- Risk: if relationship ends, you own the domains
+Never put client tools on your own accounts. If you do, you own the renewal, the billing, and the offboarding problem.
 
-Recommendation: Option B for most clients. Option C for high-volume recurring clients.
+---
 
-## Domain Purchasing
+## Credit Card & Billing
 
-Buy sending domains yourself on GoDaddy to avoid back-and-forth.
+**Rule:** Client's card pays for all tools from day one.
 
-Naming convention: same brand, different extension.
-- Brand: clientbrand.com
-- Sending 1: clientbrand.org
-- Sending 2: clientbrand.co
+**How to handle setup:**
 
-Cost: ~$12–25/year per domain on GoDaddy. Invoice to client.
+1. Create all accounts with the client present (video call or async with Loom)
+2. Client enters their own credit card during each signup
+3. You handle the technical configuration — they handle the payment
 
-Avoid .com for sending domains — higher scrutiny, worse inbox rates.
+If the client is not technical enough to do this live: have them share their card details securely (use a one-time share tool like privnote.com), add it yourself, then delete the note. Never store client card details.
 
-## Tool Setup Checklist
+**Monthly costs to communicate upfront:**
 
-| Tool | Who owns the account | Billing |
-|------|---------------------|---------|
-| GoDaddy (sending domains) | You or client | Client pays |
-| Google Workspace (sending mailboxes) | New account, separate from client's existing Workspace | Client pays |
-| Instantly | You (agency account) or new client account | Client pays |
-| Apollo | You (agency) or client | Client pays |
+| Tool | Monthly cost |
+|------|-------------|
+| Google Workspace Starter (10 users) | ~$50 |
+| Instantly Hyper Growth | $97 |
+| Apollo (basic) | $49 |
+| LeadMash (per campaign, one-off) | $6 per 1,000 leads |
+| GoDaddy domains (annual, amortised) | ~$3 |
+| **Total** | **~$200/month** |
 
-**Important:** Always create a separate Google Workspace account for sending — never add sending domains to the client's existing Workspace. Plan mismatch causes pricing issues (Business Starter vs Standard).
+---
 
-## Payments
+## DNS Access During Setup
 
-**Your GoDaddy account:** Add client credit card directly in GoDaddy under Payment Methods, or use your card and invoice the client.
+Client keeps GoDaddy login. During the DNS setup session (30 min, video call):
 
-**Google Workspace:** Create the Workspace with client's card. Use "Email for sign-in instructions" field during user creation — set to client's main email so all passwords arrive in one inbox.
+1. You tell them exactly which records to add (copy-paste from `01-domains-dns.md`)
+2. They add the records
+3. GoDaddy SMS verification goes to their phone — they confirm it
+4. You verify propagation on dnschecker.org
 
-**Instantly:** Client creates their own account, or you manage under an agency seat.
+This keeps DNS fully in their hands from the start. No delegation needed.
 
-**Invoicing recommendation:** Charge a setup fee (one-off) + monthly retainer that covers all tools and management. Example pricing:
+---
 
-| | Cost |
-|-|------|
-| Setup fee (one-off) | €500–1,000 |
-| Monthly management | €300–500/month |
-| Tools pass-through | ~€200/month at cost |
+## Your Access During the Project
 
-## Passwords & Security
+You need temporary access to:
+- Google Workspace admin (to configure DKIM, OAuth, mailboxes)
+- Instantly (to set up warmup, campaign, sequence)
+- Apollo (to build lead searches)
 
-- Save all generated passwords before closing each account creation screen
-- Use a password manager (Bitwarden, 1Password) per client
-- Never reuse passwords across client accounts
-- When handing over: export password file, transfer account ownership
+**How to get access without taking over the account:**
 
-## What to Hand Over at End of Engagement
+- Google Workspace: client adds you as an admin user, removes you at handover
+- Instantly: client adds you as a team member, removes you at handover
+- Apollo: client adds you as a user, removes you at handover
 
-- All domain login credentials
-- Google Workspace admin access
-- Instantly account access
-- Apollo account access
-- CSV of all leads used
-- Warmup score screenshots
-- DMARC report summary
+Never ask for the owner login. Always work as a team member or admin user.
 
-## Communication Template (first contact)
+---
 
-> Hi [name],
->
-> To get started I need a few things from you:
->
-> 1. Your main email address (for reply routing)
-> 2. Access to your domain registrar for 30 minutes (I'll tell you exactly which records to add)
-> 3. A credit card to set up the tool subscriptions (~€200/month)
->
-> Once those are in place I can have everything running within a week. Warmup takes 4–5 weeks, then we launch.
->
-> Let me know when works for a quick call.
+## What You Deliver
+
+At the end of the engagement, hand over a package containing:
+
+### 1. Account Summary Doc
+One page per tool:
+- Tool name and URL
+- Login email
+- Where to find the password (their password manager)
+- What it does in the system
+- Who to contact for support
+
+### 2. DNS Records Reference
+All DNS records currently active for each sending domain. So if they ever need to change registrars or something breaks, they know what should be there.
+
+### 3. Campaign Settings Reference
+- Sending limits, schedule, warmup settings
+- Which mailboxes are on which domain
+- Reply-To configuration
+
+### 4. Runbook (monthly tasks)
+What the client needs to do themselves to keep it running:
+
+| Task | Frequency | Where |
+|------|-----------|-------|
+| Check warmup scores | Weekly | Instantly → Mailboxes |
+| Check DMARC reports | Weekly | Email (sent to rua address) |
+| Monitor campaign reply rate | Weekly | Instantly → Analytics |
+| Upload new lead batch | Per campaign wave | Instantly → Leads |
+| Pause campaign before school holidays | Per school calendar | Instantly → Campaign |
+| Renew sending domains | Annually | GoDaddy |
+
+### 5. This Playbook
+Hand over a copy of this full playbook. It contains everything needed to understand, maintain, or rebuild the system from scratch.
+
+---
+
+## Removing Your Access
+
+At handover:
+1. Google Workspace: client removes your admin account
+2. Instantly: client removes you from team members
+3. Apollo: client removes you as user
+4. Confirm in writing (email) that access has been removed
+
+---
+
+## Avoiding Lock-in (Your Side)
+
+- Do not use your own domains as sending domains
+- Do not put client accounts under your agency billing
+- Do not use proprietary tools that only you can access
+- Do not be the only person who knows the passwords
+
+If you follow the ownership rules above, any client can continue without you on day one of handover. That is the goal.
