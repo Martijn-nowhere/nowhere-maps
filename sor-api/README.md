@@ -246,7 +246,7 @@ For each tag below: **Automations → Rules → New Rule**, trigger = "Tag added
 | `Module-1 Free (10-12yr)` | Reply indicates ages 10–12 |
 | `Module-1 Free (13-16yr)` | Reply indicates ages 13–16 |
 | `Module-1 Free (17+yr)` | Reply indicates ages 17+ |
-| `followup-september` | Reply says "September" / asks to be followed up later — **placeholder name, rename in `email_automation.py`'s `SEPTEMBER_TAG` once you create the actual tag in systeme.io** |
+| `Sept26-FollowUp` | Reply says "September" / asks to be followed up later |
 
 Tags don't need to exist beforehand — the automation creates them via the API on first use if missing. But the *rule* behind each tag must exist in systeme.io before that tag's first real reply comes in, or the tag gets applied with no email sent.
 

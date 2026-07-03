@@ -49,7 +49,7 @@ MODULE1_TAGS = {
     "13-16": "Module-1 Free (13-16yr)",
     "17+": "Module-1 Free (17+yr)",
 }
-SEPTEMBER_TAG = "followup-september"  # TODO: confirm/rename once you create this tag in systeme.io
+SEPTEMBER_TAG = "Sept26-FollowUp"
 
 _anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
