@@ -154,13 +154,22 @@ def _systeme_headers() -> dict:
     return {"X-API-Key": SYSTEME_IO_API_KEY, "Content-Type": "application/json"}
 
 
+def _raise_for_status_with_body(resp: httpx.Response) -> None:
+    """Like resp.raise_for_status(), but keeps the response body in the error
+    instead of discarding it -- systeme.io's error detail lives in the body."""
+    if resp.is_error:
+        raise SystemeIOError(
+            f"{resp.request.method} {resp.request.url} -> {resp.status_code}: {resp.text}"
+        )
+
+
 def _find_contact_id_by_email(client: httpx.Client, email: str) -> str | None:
     resp = client.get(
         f"{SYSTEME_IO_BASE_URL}/contacts",
         headers=_systeme_headers(),
         params={"email": email},
     )
-    resp.raise_for_status()
+    _raise_for_status_with_body(resp)
     items = resp.json().get("items", [])
     for item in items:
         if item.get("email", "").lower() == email.lower():
@@ -175,17 +184,26 @@ def _create_contact(client: httpx.Client, email: str) -> str:
         json={"email": email},
     )
     if resp.status_code == 422:
-        existing_id = _find_contact_id_by_email(client, email)
+        try:
+            existing_id = _find_contact_id_by_email(client, email)
+        except SystemeIOError as lookup_exc:
+            raise SystemeIOError(
+                f"Contact create for {email} returned 422 (body: {resp.text}); "
+                f"lookup fallback also failed: {lookup_exc}"
+            ) from lookup_exc
         if existing_id:
             return existing_id
-        raise SystemeIOError(f"Contact create returned 422 but lookup found nothing for {email}")
-    resp.raise_for_status()
+        raise SystemeIOError(
+            f"Contact create for {email} returned 422 with no matching existing "
+            f"contact found via lookup. systeme.io response body: {resp.text}"
+        )
+    _raise_for_status_with_body(resp)
     return str(resp.json()["id"])
 
 
 def _get_or_create_tag_id(client: httpx.Client, tag_name: str) -> str:
     resp = client.get(f"{SYSTEME_IO_BASE_URL}/tags", headers=_systeme_headers())
-    resp.raise_for_status()
+    _raise_for_status_with_body(resp)
     for tag in resp.json().get("items", []):
         if tag.get("name") == tag_name:
             return str(tag["id"])
@@ -195,7 +213,7 @@ def _get_or_create_tag_id(client: httpx.Client, tag_name: str) -> str:
         headers=_systeme_headers(),
         json={"name": tag_name},
     )
-    resp.raise_for_status()
+    _raise_for_status_with_body(resp)
     return str(resp.json()["id"])
 
 
@@ -210,7 +228,7 @@ def upsert_contact_and_tag(email: str, tag_name: str) -> tuple[str, str]:
             headers=_systeme_headers(),
             json={"tagId": int(tag_id)},
         )
-        resp.raise_for_status()
+        _raise_for_status_with_body(resp)
         return contact_id, tag_id
 
 
