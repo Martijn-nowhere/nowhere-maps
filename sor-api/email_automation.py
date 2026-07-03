@@ -97,18 +97,21 @@ def _extract_country(payload: dict) -> str | None:
     return None
 
 
-# Tag names the matching systeme.io automation rule must be built to listen for.
-# "Tag added" -> that rule enrols the contact in the age- and currency-
-# appropriate free Module 1 course and subscribes them to the matching
-# currency's nurture campaign. Must match the tag names created in
-# systeme.io exactly (case-sensitive). PLACEHOLDER naming -- confirm/replace
-# with the actual 12 tags once created in systeme.io.
-MODULE1_TAGS = {
-    age_group: {
-        currency: f"Module-1 Free ({age_group}yr) {currency}"
-        for currency in CURRENCIES
-    }
-    for age_group in AGE_GROUPS
+# Age and currency are independent concerns, tagged separately: the age tag's
+# rule only enrols the contact in that age's free Module 1 course; the
+# currency tag's rule only subscribes the contact to that currency's nurture
+# campaign (where the checkout links live). A contact gets both tags applied.
+MODULE1_AGE_TAGS = {
+    "6-9": "Module-1 Free (6-9yr)",
+    "10-12": "Module-1 Free (10-12yr)",
+    "13-16": "Module-1 Free (13-16yr)",
+    "17+": "Module-1 Free (17+yr)",
+}
+# PLACEHOLDER naming -- confirm/replace with the actual 3 currency tags once created in systeme.io.
+CURRENCY_TAGS = {
+    "EUR": "Nurture-EUR",
+    "GBP": "Nurture-GBP",
+    "USD": "Nurture-USD",
 }
 SEPTEMBER_TAG = "Sept26-FollowUp"
 
@@ -278,19 +281,23 @@ def _get_or_create_tag_id(client: httpx.Client, tag_name: str) -> str:
     return str(resp.json()["id"])
 
 
-def upsert_contact_and_tag(email: str, tag_name: str) -> tuple[str, str]:
-    """Create/find the contact and assign tag_name. Returns (contact_id, tag_id)."""
+def _assign_tag(client: httpx.Client, contact_id: str, tag_name: str) -> str:
+    tag_id = _get_or_create_tag_id(client, tag_name)
+    resp = client.post(
+        f"{SYSTEME_IO_BASE_URL}/contacts/{contact_id}/tags",
+        headers=_systeme_headers(),
+        json={"tagId": int(tag_id)},
+    )
+    _raise_for_status_with_body(resp)
+    return tag_id
+
+
+def upsert_contact_and_tags(email: str, tag_names: list[str]) -> tuple[str, list[str]]:
+    """Create/find the contact once and assign each of tag_names. Returns (contact_id, tag_ids)."""
     with httpx.Client(timeout=15) as client:
         contact_id = _create_contact(client, email)
-        tag_id = _get_or_create_tag_id(client, tag_name)
-
-        resp = client.post(
-            f"{SYSTEME_IO_BASE_URL}/contacts/{contact_id}/tags",
-            headers=_systeme_headers(),
-            json={"tagId": int(tag_id)},
-        )
-        _raise_for_status_with_body(resp)
-        return contact_id, tag_id
+        tag_ids = [_assign_tag(client, contact_id, name) for name in tag_names]
+        return contact_id, tag_ids
 
 
 # ---------------------------------------------------------------------------
@@ -370,19 +377,24 @@ async def instantly_reply_webhook(
         age_group = classification.get("age_group")
         language = classification.get("language")
 
-        if intent == "age_group_provided" and age_group in MODULE1_TAGS:
+        if intent == "age_group_provided" and age_group in MODULE1_AGE_TAGS:
+            tags_to_apply = [MODULE1_AGE_TAGS[age_group]]
             country = _extract_country(payload)
-            if country is None:
-                action = "logged_needs_currency_review"
-                error = "Could not find a country field in the webhook payload -- can't pick a currency."
-            else:
+            if country is not None:
                 currency = currency_for_country(country)
-                tag_applied = MODULE1_TAGS[age_group][currency]
-                systeme_contact_id, _ = upsert_contact_and_tag(lead_email, tag_applied)
+                tags_to_apply.append(CURRENCY_TAGS[currency])
+
+            systeme_contact_id, _ = upsert_contact_and_tags(lead_email, tags_to_apply)
+            tag_applied = ", ".join(tags_to_apply)
+
+            if country is None:
+                action = "tagged_module1_currency_pending"
+                error = "Got Module 1 access, but no country field in the webhook payload -- currency/nurture campaign not assigned yet."
+            else:
                 action = "tagged_module1"
         elif intent == "september_followup":
             tag_applied = SEPTEMBER_TAG
-            systeme_contact_id, _ = upsert_contact_and_tag(lead_email, tag_applied)
+            systeme_contact_id, _ = upsert_contact_and_tags(lead_email, [SEPTEMBER_TAG])
             action = "tagged_september"
         elif intent == "not_interested":
             action = "logged_not_interested"
@@ -457,7 +469,8 @@ def automation_stats(_key: str = Depends(require_api_key)):
         r["age_group"]: r["n"]
         for r in conn.execute(
             """SELECT age_group, COUNT(*) AS n FROM reply_automation_log
-               WHERE action = 'tagged_module1' GROUP BY age_group"""
+               WHERE action IN ('tagged_module1', 'tagged_module1_currency_pending')
+               GROUP BY age_group"""
         ).fetchall()
     }
 
@@ -501,7 +514,7 @@ def automation_stats(_key: str = Depends(require_api_key)):
         "by_day": by_day,
         "last_received_at": last_received_at,
         "errors": by_action.get("error", 0),
-        "needs_currency_review": by_action.get("logged_needs_currency_review", 0),
+        "needs_currency_review": by_action.get("tagged_module1_currency_pending", 0),
     }
 
 
@@ -588,7 +601,7 @@ async function load() {
 
   const cards = [
     ["Total replies", stats.total_replies, ""],
-    ["Module 1 sent", stats.by_action.tagged_module1 || 0, ""],
+    ["Module 1 sent", (stats.by_action.tagged_module1 || 0) + (stats.by_action.tagged_module1_currency_pending || 0), ""],
     ["September follow-up", stats.by_action.tagged_september || 0, ""],
     ["Not interested", stats.by_action.logged_not_interested || 0, ""],
     ["Needs review", stats.by_action.logged_unclear || 0, ""],
