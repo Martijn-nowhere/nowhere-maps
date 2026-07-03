@@ -208,6 +208,63 @@ The database is seeded automatically on first startup via the `startup` event ha
 |---|---|---|
 | `DB_PATH` | `sor.db` | Path to SQLite database file |
 | `SOR_MASTER_KEY` | `""` | Admin API key that bypasses DB check (set in production) |
+| `ANTHROPIC_API_KEY` | `""` | Used to classify inbound Instantly replies (see below) |
+| `SYSTEME_IO_API_KEY` | `""` | systeme.io public API key (Profile → Public API keys) |
+| `INSTANTLY_WEBHOOK_SECRET` | `""` | Shared secret checked on `/webhooks/instantly-reply` — leave blank only while testing |
+
+---
+
+## Reply-to-course automation
+
+Turns Instantly cold-email replies into free Module 1 access + nurture-sequence enrolment in systeme.io, with zero manual work.
+
+**Flow:** Instantly reply → webhook → Claude classifies the reply → matching systeme.io contact tag → a systeme.io workflow (built once, in their no-code editor) sends the age-appropriate Module 1 and enrols the contact in the 3-email nurture sequence.
+
+The campaign (3 emails to 30 inboxes, ~13k sends) asks "which age group do you teach?" and offers free Module 1 in return. A reply of "September" gets tagged for a later follow-up instead.
+
+### 1. Configure env vars
+
+Set `ANTHROPIC_API_KEY`, `SYSTEME_IO_API_KEY`, and `INSTANTLY_WEBHOOK_SECRET` (pick any random string for the secret) in Render's environment tab.
+
+### 2. Build the systeme.io workflows (one-time, manual — systeme.io automations are no-code)
+
+For each tag below: **Automations → Workflow → New**, trigger = "Tag added" with that tag, action = send the matching Module 1 email + enrol in your 3-email nurture sequence.
+
+| Tag | Fires when |
+|---|---|
+| `module1-6-9` | Reply indicates ages 6–9 |
+| `module1-10-12` | Reply indicates ages 10–12 |
+| `module1-13-16` | Reply indicates ages 13–16 |
+| `module1-17plus` | Reply indicates ages 17+ |
+| `followup-september` | Reply says "September" / asks to be followed up later |
+
+Tags don't need to exist beforehand — the automation creates them via the API on first use if missing. But the *workflow* behind each tag must exist in systeme.io before that tag's first real reply comes in, or the tag gets applied with no email sent.
+
+### 3. Point Instantly at the webhook
+
+In Instantly: **Settings → Integrations → Webhooks** (or via API v2 `POST /api/v2/webhook`) → create a webhook for the `reply_received` event, URL `https://<your-render-url>/webhooks/instantly-reply`. If Instantly's webhook UI lets you set a custom header or secret token, set it to match `INSTANTLY_WEBHOOK_SECRET` — check [developer.instantly.ai/api/v2/webhook/createwebhook](https://developer.instantly.ai/api/v2/webhook/createwebhook) for the exact field, since this wasn't verified live while building. Replies to `auto_reply_received` (out-of-office etc.) are a separate event type and won't hit this webhook.
+
+### 4. Watch it
+
+`https://<your-render-url>/dashboard?key=<your SOR_MASTER_KEY>` — live counts of replies processed, Module 1 sends by age group, September follow-ups, and anything the classifier punted to "needs review" or that errored. Auto-refreshes every 30s. Bookmark it with the key in the URL.
+
+### Endpoints
+
+| Endpoint | Auth | Purpose |
+|---|---|---|
+| `POST /webhooks/instantly-reply` | webhook secret | Receives Instantly's `reply_received` events |
+| `GET /automation/log?action=&limit=` | `X-API-Key` | Raw event log, filterable by `action` (`tagged_module1`, `tagged_september`, `logged_not_interested`, `logged_unclear`, `error`) |
+| `GET /automation/stats` | `X-API-Key` | Aggregate counts for the dashboard |
+| `GET /dashboard?key=` | query-param key | HTML dashboard |
+
+### Go-live checklist
+
+The systeme.io request/response shapes in `email_automation.py` (`_create_contact`, `_find_contact_id_by_email`, `_get_or_create_tag_id`) are based on their publicly documented API but weren't tested against a live key while building this — their docs site returned 403 to the automated fetch used during development. Before sending real campaign traffic:
+
+1. Send one test webhook payload (`curl -X POST .../webhooks/instantly-reply -d '{"event_type":"reply_received","lead_email":"you@test.com","reply_text":"I teach 5th grade","campaign_id":"test"}'`) and confirm in systeme.io that a contact was created and tagged `module1-10-12`.
+2. Reply again from the same test address to confirm the dedupe check stops it from double-tagging.
+3. Check `GET /automation/log` for the resulting row and confirm `error` is empty.
+4. If `_find_contact_id_by_email` 404s or the response shape doesn't match (systeme.io's "look up contact by email" support was, as of writing, still on their public roadmap rather than confirmed-shipped), replies from people who are already systeme.io contacts will log an `error` instead of tagging — check for that pattern in `/automation/log?action=error` early on and patch the lookup call if needed.
 
 ---
 

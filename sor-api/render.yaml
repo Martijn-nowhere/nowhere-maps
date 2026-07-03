@@ -10,6 +10,12 @@ services:
         value: /data/sor.db
       - key: SOR_MASTER_KEY
         generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SYSTEME_IO_API_KEY
+        sync: false
+      - key: INSTANTLY_WEBHOOK_SECRET
+        sync: false
     disk:
       name: sor-data
       mountPath: /data

@@ -13,17 +13,14 @@ def _hash_key(key: str) -> str:
     return hashlib.sha256(key.encode()).hexdigest()
 
 
-def require_api_key(api_key: str = Security(API_KEY_HEADER)) -> str:
+def is_valid_key(api_key: str) -> bool:
     if not api_key:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="X-API-Key header is required for this endpoint.",
-        )
+        return False
 
     key_hash = _hash_key(api_key)
 
     if MASTER_KEY and key_hash == _hash_key(MASTER_KEY):
-        return api_key
+        return True
 
     conn = get_db()
     row = conn.execute(
@@ -31,8 +28,16 @@ def require_api_key(api_key: str = Security(API_KEY_HEADER)) -> str:
         (key_hash,),
     ).fetchone()
     conn.close()
+    return row is not None
 
-    if row is None:
+
+def require_api_key(api_key: str = Security(API_KEY_HEADER)) -> str:
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="X-API-Key header is required for this endpoint.",
+        )
+    if not is_valid_key(api_key):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or unapproved API key. Request access at POST /request-access.",

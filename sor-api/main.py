@@ -10,6 +10,7 @@ from pydantic import BaseModel, EmailStr
 
 from auth import require_api_key
 from database import get_db, init_db, row_to_dict
+from email_automation import router as email_automation_router
 from seed_data import seed
 
 # ---------------------------------------------------------------------------
@@ -42,6 +43,9 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+
+app.include_router(email_automation_router)
 
 
 @app.on_event("startup")
