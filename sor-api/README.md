@@ -238,15 +238,27 @@ Set `ANTHROPIC_API_KEY`, `SYSTEME_IO_API_KEY`, and `INSTANTLY_WEBHOOK_SECRET` (p
 
 Use an **Automation Rule**, not a Workflow — this is a plain "tag added → do two things" action with no delays or branching, which is exactly what Rules are for (Workflows are the visual multi-step builder for when the trigger logic itself needs conditions).
 
-For each tag below: **Automations → Rules → New Rule**, trigger = "Tag added" with that tag, actions = "Enroll in course" (the matching course, Access type = Partial access, Module = Module 1) + "Subscribe to campaign" (your existing nurture sequence — its timing lives in that Campaign, the rule just enrols the contact into it).
+For each tag below: **Automations → Rules → New Rule**, trigger = "Tag added" with that tag, actions = "Enroll in course" (the matching course, Access type = Partial access, Module = Module 1) + "Subscribe to campaign" (the matching currency's nurture sequence with the right checkout links — its timing lives in that Campaign, the rule just enrols the contact into it).
 
-| Tag (must match exactly, case-sensitive) | Fires when |
+There are 3 nurture campaigns (EUR/GBP/USD checkout links), so each age group needs 3 tags — 12 total, plus the September one.
+
+| Tag (PLACEHOLDER naming — confirm/replace with your actual 12 tags) | Fires when |
 |---|---|
-| `Module-1 Free (6-9yr)` | Reply indicates ages 6–9 |
-| `Module-1 Free (10-12yr)` | Reply indicates ages 10–12 |
-| `Module-1 Free (13-16yr)` | Reply indicates ages 13–16 |
-| `Module-1 Free (17+yr)` | Reply indicates ages 17+ |
+| `Module-1 Free (6-9yr) EUR` / `GBP` / `USD` | Ages 6–9, routed by the lead's currency |
+| `Module-1 Free (10-12yr) EUR` / `GBP` / `USD` | Ages 10–12, routed by the lead's currency |
+| `Module-1 Free (13-16yr) EUR` / `GBP` / `USD` | Ages 13–16, routed by the lead's currency |
+| `Module-1 Free (17+yr) EUR` / `GBP` / `USD` | Ages 17+, routed by the lead's currency |
 | `Sept26-FollowUp` | Reply says "September" / asks to be followed up later |
+
+`sor-api/email_automation.py`'s `MODULE1_TAGS` currently *generates* these 12 names from the pattern above — if you create the tags with different names, update `MODULE1_TAGS` to match exactly (same as the age-only tags before: it's a hard match, case-sensitive).
+
+### Currency routing
+
+Each lead's currency is derived from their country, not from anything in the reply text:
+
+1. The webhook payload is searched for a country field — tries `Person Country`, `country`, `personCountry`, `lead country` (case/spacing-insensitive), both at the top level and inside common nested containers (`variables`, `custom_variables`, `lead_data`, `custom_fields`). **The exact field name Instantly uses for your "Person Country" CSV column wasn't verifiable against live docs while this was built** — same blind spot as the systeme.io API before. Check a real reply's `raw_payload` in `/automation/log` and adjust `COUNTRY_FIELD_CANDIDATES` in `email_automation.py` if it guessed wrong.
+2. Country → currency: United Kingdom → GBP, EU member states → EUR, everything else (including non-EU Europe like Switzerland/Norway) → USD. Change `EU_COUNTRIES`/`UK_NAMES`/`currency_for_country()` if that's not the split you want.
+3. If no country field can be found at all, the reply is **not** guessed at — it's logged with `action = logged_needs_currency_review` and no tag is applied, visible on the dashboard under "Needs currency review". This is a safety net: sending someone the wrong currency's checkout link is worse than a delay while you manually fix a misrouted lead.
 
 Tags don't need to exist beforehand — the automation creates them via the API on first use if missing. But the *rule* behind each tag must exist in systeme.io before that tag's first real reply comes in, or the tag gets applied with no email sent.
 
