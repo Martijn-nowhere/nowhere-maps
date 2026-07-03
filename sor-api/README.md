@@ -222,6 +222,14 @@ Turns Instantly cold-email replies into free Module 1 access + nurture-sequence 
 
 The campaign (3 emails to 30 inboxes, ~13k sends) asks "which age group do you teach?" and offers free Module 1 in return. A reply of "September" gets tagged for a later follow-up instead.
 
+### Multi-language replies
+
+This campaign goes out to multiple countries, so replies come back in whatever language the recipient writes in — not necessarily the language the campaign itself was sent in. The classifier (Claude) reads and reasons about each reply in its original language rather than matching English keywords, and converts whatever schooling-system term is used (grade, class, year, form, etc.) to the closest age band using that country's own age/grade conventions, not US grade norms. "Ambiguous in this reply's country/language" still falls back to `unclear` rather than guessing.
+
+Each classified reply also gets an ISO 639-1 language code logged (`GET /automation/log`, and a "Replies by language" breakdown on the dashboard) so you can see which languages/countries are actually replying and spot-check accuracy per language.
+
+One thing this does **not** do: localize the Module 1 emails or nurture sequence themselves — that's whatever content the systeme.io workflow behind each tag sends. If you want different email copy per language, you'd need per-language tags (e.g. `module1-10-12-fr`) and workflows; the current setup sends the same (language of your systeme.io workflow) content regardless of the reply's language. Say the word if you want that split out.
+
 ### 1. Configure env vars
 
 Set `ANTHROPIC_API_KEY`, `SYSTEME_IO_API_KEY`, and `INSTANTLY_WEBHOOK_SECRET` (pick any random string for the secret) in Render's environment tab.

@@ -52,28 +52,34 @@ SEPTEMBER_TAG = "followup-september"
 
 _anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
-CLASSIFY_SYSTEM_PROMPT = """You classify replies to a School of Recycling cold email campaign.
+CLASSIFY_SYSTEM_PROMPT = """You classify replies to a School of Recycling cold email campaign,
+sent to teachers and parents in many countries. Replies may be in ANY language, including
+languages different from the one the campaign was sent in. Read and reason about the reply
+in its own language -- do not require English or literal keyword matches.
 
-The campaign sent up to 3 emails asking the recipient (a teacher or parent) to reply with
-the age group they teach, in exchange for a free Module 1 of the matching course. Email copy:
-
-Email 1: "Which age group do you teach?"
-Email 2: "Module 1 is free for 100 days. Just reply with your age group and I'll send you access."
-Email 3: "If you're curious, just reply with your age group and I'll send it over.
-P.S. Not the right time? Reply with 'September' and I'll follow up when the new school year starts."
+The campaign's 3-email sequence asks the recipient (a teacher or parent) to reply with the
+age group they teach, in exchange for free access to Module 1 of the matching course. The
+last email adds: if now isn't a good time, reply asking for a follow-up when the new school
+year starts (this may be phrased as "September" or as the equivalent northern- or
+southern-hemisphere school-year start in the recipient's own country and language).
 
 Read the reply and call classify_reply with:
-- intent: "age_group_provided" if they state or imply an age group / grade level they teach.
-- intent: "september_followup" if they ask to be followed up with in September / later / new school year,
-  even if they don't use the literal word "September".
+- intent: "age_group_provided" if they state or imply an age group / grade / class / year / form level
+  they teach, in whatever schooling-system terminology their country and language use.
+- intent: "september_followup" if they ask to be followed up with at the start of the next school year,
+  regardless of language or which month that actually falls in for their country.
 - intent: "not_interested" if they decline, ask to be removed, or are clearly negative.
 - intent: "unclear" for anything else (questions you can't confidently resolve, blank/garbled replies,
   replies unrelated to the offer).
 
-If intent is "age_group_provided", also set age_group to exactly one of "6-9", "10-12", "13-16", "17+" by
-mapping any grade/age mentioned to the closest band using standard US grade-age norms
-(e.g. "5th grade" ~ age 10 -> "10-12", "high school" -> "17+" unless a specific younger age is given).
-If the age/grade is too ambiguous to place confidently, use intent "unclear" instead of guessing."""
+If intent is "age_group_provided", also set age_group to exactly one of "6-9", "10-12", "13-16", "17+"
+by converting whatever grade/class/year/form is mentioned to the age of students at that level in that
+country's education system, then mapping to the closest band. If the age/grade is too ambiguous to
+place confidently -- including cases where the schooling term doesn't map cleanly to a known system --
+use intent "unclear" instead of guessing.
+
+Always also set language to the ISO 639-1 code of the language the reply itself is written in
+(e.g. "en", "fr", "de", "es", "nl"), regardless of what language the campaign was sent in."""
 
 CLASSIFY_TOOL = {
     "name": "classify_reply",
@@ -90,8 +96,12 @@ CLASSIFY_TOOL = {
                 "enum": AGE_GROUPS,
                 "description": "Required when intent is age_group_provided, omitted otherwise.",
             },
+            "language": {
+                "type": "string",
+                "description": "ISO 639-1 code of the language the reply is written in, e.g. 'en', 'fr', 'de'.",
+            },
         },
-        "required": ["intent"],
+        "required": ["intent", "language"],
     },
 }
 
@@ -224,16 +234,16 @@ def _dedupe_key(payload: dict, lead_email: str, reply_text: str) -> str:
 
 
 def _log(conn, dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
-          intent, age_group, action, tag_applied, systeme_contact_id, error, raw_payload):
+          intent, age_group, language, action, tag_applied, systeme_contact_id, error, raw_payload):
     conn.execute(
         """
         INSERT OR IGNORE INTO reply_automation_log
             (dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
-             intent, age_group, action, tag_applied, systeme_contact_id, error, raw_payload)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             intent, age_group, language, action, tag_applied, systeme_contact_id, error, raw_payload)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
-         intent, age_group, action, tag_applied, systeme_contact_id, error, raw_payload),
+         intent, age_group, language, action, tag_applied, systeme_contact_id, error, raw_payload),
     )
     conn.commit()
 
@@ -267,14 +277,15 @@ async def instantly_reply_webhook(
         conn.close()
         return {"status": "duplicate", "dedupe_key": dedupe_key}
 
-    intent, age_group, action, tag_applied, systeme_contact_id, error = (
-        "unclear", None, "none", None, None, None
+    intent, age_group, language, action, tag_applied, systeme_contact_id, error = (
+        "unclear", None, None, "none", None, None, None
     )
 
     try:
         classification = classify_reply(reply_text, reply_subject)
         intent = classification.get("intent", "unclear")
         age_group = classification.get("age_group")
+        language = classification.get("language")
 
         if intent == "age_group_provided" and age_group in MODULE1_TAGS:
             tag_applied = MODULE1_TAGS[age_group]
@@ -294,7 +305,7 @@ async def instantly_reply_webhook(
 
     _log(
         conn, dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
-        intent, age_group, action, tag_applied, systeme_contact_id, error,
+        intent, age_group, language, action, tag_applied, systeme_contact_id, error,
         json.dumps(payload),
     )
     conn.close()
@@ -304,6 +315,7 @@ async def instantly_reply_webhook(
         "action": action,
         "intent": intent,
         "age_group": age_group,
+        "language": language,
         "tag_applied": tag_applied,
         "error": error,
     }
@@ -367,6 +379,14 @@ def automation_stats(_key: str = Depends(require_api_key)):
         ).fetchall()
     ]
 
+    by_language = {
+        (r["language"] or "unknown"): r["n"]
+        for r in conn.execute(
+            """SELECT language, COUNT(*) AS n FROM reply_automation_log
+               GROUP BY language ORDER BY n DESC"""
+        ).fetchall()
+    }
+
     last_received_at = conn.execute(
         "SELECT MAX(received_at) AS t FROM reply_automation_log"
     ).fetchone()["t"]
@@ -377,6 +397,7 @@ def automation_stats(_key: str = Depends(require_api_key)):
         "total_replies": totals,
         "by_action": by_action,
         "module1_by_age_group": by_age_group,
+        "by_language": by_language,
         "by_day": by_day,
         "last_received_at": last_received_at,
         "errors": by_action.get("error", 0),
@@ -432,10 +453,13 @@ _DASHBOARD_HTML = """<!doctype html>
   <div class="section-title">Free Module 1 sent, by age group</div>
   <div class="cards" id="age-cards"></div>
 
+  <div class="section-title">Replies by language</div>
+  <div class="cards" id="lang-cards"></div>
+
   <div class="section-title">Recent activity</div>
   <div class="wrap">
     <table>
-      <thead><tr><th>Time</th><th>Email</th><th>Intent</th><th>Age</th><th>Action</th><th>Error</th></tr></thead>
+      <thead><tr><th>Time</th><th>Email</th><th>Lang</th><th>Intent</th><th>Age</th><th>Action</th><th>Error</th></tr></thead>
       <tbody id="log-body"></tbody>
     </table>
   </div>
@@ -443,6 +467,12 @@ _DASHBOARD_HTML = """<!doctype html>
 <script>
 const KEY = "__KEY__";
 const headers = { "X-API-Key": KEY };
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
 
 async function load() {
   const [stats, log] = await Promise.all([
@@ -461,22 +491,30 @@ async function load() {
     ["Errors", stats.errors, "err"],
   ];
   document.getElementById("cards").innerHTML = cards.map(([l, n, cls]) =>
-    `<div class="card ${cls}"><div class="n">${n}</div><div class="l">${l}</div></div>`
+    `<div class="card ${cls}"><div class="n">${esc(n)}</div><div class="l">${esc(l)}</div></div>`
   ).join("");
 
   const ageGroups = ["6-9", "10-12", "13-16", "17+"];
   document.getElementById("age-cards").innerHTML = ageGroups.map(ag =>
-    `<div class="card"><div class="n">${stats.module1_by_age_group[ag] || 0}</div><div class="l">${ag}</div></div>`
+    `<div class="card"><div class="n">${esc(stats.module1_by_age_group[ag] || 0)}</div><div class="l">${esc(ag)}</div></div>`
   ).join("");
+
+  const langEntries = Object.entries(stats.by_language || {});
+  document.getElementById("lang-cards").innerHTML = langEntries.length
+    ? langEntries.map(([lang, n]) =>
+        `<div class="card"><div class="n">${esc(n)}</div><div class="l">${esc(lang)}</div></div>`
+      ).join("")
+    : `<div class="card"><div class="n">–</div><div class="l">no data yet</div></div>`;
 
   document.getElementById("log-body").innerHTML = log.map(r => `
     <tr class="${r.error ? 'error' : ''}">
-      <td>${r.received_at}</td>
-      <td>${r.lead_email}</td>
-      <td><span class="pill">${r.intent || '-'}</span></td>
-      <td>${r.age_group || '-'}</td>
-      <td>${r.action}</td>
-      <td>${r.error || ''}</td>
+      <td>${esc(r.received_at)}</td>
+      <td>${esc(r.lead_email)}</td>
+      <td>${esc(r.language || '-')}</td>
+      <td><span class="pill">${esc(r.intent || '-')}</span></td>
+      <td>${esc(r.age_group || '-')}</td>
+      <td>${esc(r.action)}</td>
+      <td>${esc(r.error || '')}</td>
     </tr>
   `).join("");
 }

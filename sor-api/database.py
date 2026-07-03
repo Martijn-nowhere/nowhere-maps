@@ -63,6 +63,7 @@ def init_db():
             reply_text TEXT,
             intent TEXT,
             age_group TEXT,
+            language TEXT,
             action TEXT NOT NULL DEFAULT 'none',
             tag_applied TEXT,
             systeme_contact_id TEXT,
