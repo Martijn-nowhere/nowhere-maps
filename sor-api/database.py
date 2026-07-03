@@ -52,6 +52,24 @@ def init_db():
             status TEXT NOT NULL DEFAULT 'pending',
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
+
+        CREATE TABLE IF NOT EXISTS reply_automation_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            received_at TEXT NOT NULL DEFAULT (datetime('now')),
+            dedupe_key TEXT NOT NULL UNIQUE,
+            lead_email TEXT NOT NULL,
+            campaign_id TEXT,
+            reply_subject TEXT,
+            reply_text TEXT,
+            intent TEXT,
+            age_group TEXT,
+            language TEXT,
+            action TEXT NOT NULL DEFAULT 'none',
+            tag_applied TEXT,
+            systeme_contact_id TEXT,
+            error TEXT,
+            raw_payload TEXT
+        );
     """)
 
     conn.commit()
