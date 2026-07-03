@@ -40,15 +40,16 @@ CLASSIFIER_MODEL = "claude-haiku-4-5-20251001"
 AGE_GROUPS = ["6-9", "10-12", "13-16", "17+"]
 
 # Tag names the matching systeme.io automation rule must be built to listen for.
-# "Tag added" -> that rule sends the age-appropriate free Module 1 and
-# enrols the contact in the 3-email nurture sequence.
+# "Tag added" -> that rule enrols the contact in the age-appropriate free
+# Module 1 course and subscribes them to the nurture campaign. Must match
+# the tag names created in systeme.io exactly (case-sensitive).
 MODULE1_TAGS = {
-    "6-9": "module1-6-9",
-    "10-12": "module1-10-12",
-    "13-16": "module1-13-16",
-    "17+": "module1-17plus",
+    "6-9": "Module-1 Free (6-9yr)",
+    "10-12": "Module-1 Free (10-12yr)",
+    "13-16": "Module-1 Free (13-16yr)",
+    "17+": "Module-1 Free (17+yr)",
 }
-SEPTEMBER_TAG = "followup-september"
+SEPTEMBER_TAG = "followup-september"  # TODO: confirm/rename once you create this tag in systeme.io
 
 _anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 

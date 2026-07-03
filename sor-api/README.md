@@ -238,15 +238,15 @@ Set `ANTHROPIC_API_KEY`, `SYSTEME_IO_API_KEY`, and `INSTANTLY_WEBHOOK_SECRET` (p
 
 Use an **Automation Rule**, not a Workflow — this is a plain "tag added → do two things" action with no delays or branching, which is exactly what Rules are for (Workflows are the visual multi-step builder for when the trigger logic itself needs conditions).
 
-For each tag below: **Automations → Rules → New Rule**, condition = "Tag added" with that tag, actions = "Send email" (the matching free Module 1) + "Add to campaign" (your existing 3-email nurture sequence — the nurture sequence's own timing lives in that Campaign, the rule just enrols the contact into it).
+For each tag below: **Automations → Rules → New Rule**, trigger = "Tag added" with that tag, actions = "Enroll in course" (the matching course, Access type = Partial access, Module = Module 1) + "Subscribe to campaign" (your existing nurture sequence — its timing lives in that Campaign, the rule just enrols the contact into it).
 
-| Tag | Fires when |
+| Tag (must match exactly, case-sensitive) | Fires when |
 |---|---|
-| `module1-6-9` | Reply indicates ages 6–9 |
-| `module1-10-12` | Reply indicates ages 10–12 |
-| `module1-13-16` | Reply indicates ages 13–16 |
-| `module1-17plus` | Reply indicates ages 17+ |
-| `followup-september` | Reply says "September" / asks to be followed up later |
+| `Module-1 Free (6-9yr)` | Reply indicates ages 6–9 |
+| `Module-1 Free (10-12yr)` | Reply indicates ages 10–12 |
+| `Module-1 Free (13-16yr)` | Reply indicates ages 13–16 |
+| `Module-1 Free (17+yr)` | Reply indicates ages 17+ |
+| `followup-september` | Reply says "September" / asks to be followed up later — **placeholder name, rename in `email_automation.py`'s `SEPTEMBER_TAG` once you create the actual tag in systeme.io** |
 
 Tags don't need to exist beforehand — the automation creates them via the API on first use if missing. But the *rule* behind each tag must exist in systeme.io before that tag's first real reply comes in, or the tag gets applied with no email sent.
 
