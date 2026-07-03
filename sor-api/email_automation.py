@@ -2,9 +2,9 @@
 Reply-to-course automation.
 
 Flow: Instantly (cold email campaign) -> webhook on reply -> Claude classifies
-the reply -> systeme.io contact gets tagged -> a systeme.io workflow (built
-in their no-code editor, not here) sends the matching free Module 1 and
-enrolls the lead in the nurture sequence.
+the reply -> systeme.io contact gets tagged -> a systeme.io automation rule
+(built in their no-code editor, not here) sends the matching free Module 1
+and enrolls the lead in the nurture sequence.
 
 Everything here is best-effort against publicly documented behaviour for
 Instantly API v2 webhooks and the systeme.io public API. Neither vendor's
@@ -39,8 +39,8 @@ CLASSIFIER_MODEL = "claude-haiku-4-5-20251001"
 
 AGE_GROUPS = ["6-9", "10-12", "13-16", "17+"]
 
-# Tag names the matching systeme.io workflow must be built to listen for.
-# "Tag added" -> that workflow sends the age-appropriate free Module 1 and
+# Tag names the matching systeme.io automation rule must be built to listen for.
+# "Tag added" -> that rule sends the age-appropriate free Module 1 and
 # enrols the contact in the 3-email nurture sequence.
 MODULE1_TAGS = {
     "6-9": "module1-6-9",

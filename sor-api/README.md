@@ -218,7 +218,7 @@ The database is seeded automatically on first startup via the `startup` event ha
 
 Turns Instantly cold-email replies into free Module 1 access + nurture-sequence enrolment in systeme.io, with zero manual work.
 
-**Flow:** Instantly reply → webhook → Claude classifies the reply → matching systeme.io contact tag → a systeme.io workflow (built once, in their no-code editor) sends the age-appropriate Module 1 and enrols the contact in the 3-email nurture sequence.
+**Flow:** Instantly reply → webhook → Claude classifies the reply → matching systeme.io contact tag → a systeme.io automation rule (built once, no-code) sends the age-appropriate Module 1 and enrols the contact in the 3-email nurture sequence.
 
 The campaign (3 emails to 30 inboxes, ~13k sends) asks "which age group do you teach?" and offers free Module 1 in return. A reply of "September" gets tagged for a later follow-up instead.
 
@@ -234,9 +234,11 @@ One thing this does **not** do: localize the Module 1 emails or nurture sequence
 
 Set `ANTHROPIC_API_KEY`, `SYSTEME_IO_API_KEY`, and `INSTANTLY_WEBHOOK_SECRET` (pick any random string for the secret) in Render's environment tab.
 
-### 2. Build the systeme.io workflows (one-time, manual — systeme.io automations are no-code)
+### 2. Build the systeme.io automation rules (one-time, manual — systeme.io automations are no-code)
 
-For each tag below: **Automations → Workflow → New**, trigger = "Tag added" with that tag, action = send the matching Module 1 email + enrol in your 3-email nurture sequence.
+Use an **Automation Rule**, not a Workflow — this is a plain "tag added → do two things" action with no delays or branching, which is exactly what Rules are for (Workflows are the visual multi-step builder for when the trigger logic itself needs conditions).
+
+For each tag below: **Automations → Rules → New Rule**, condition = "Tag added" with that tag, actions = "Send email" (the matching free Module 1) + "Add to campaign" (your existing 3-email nurture sequence — the nurture sequence's own timing lives in that Campaign, the rule just enrols the contact into it).
 
 | Tag | Fires when |
 |---|---|
@@ -246,7 +248,7 @@ For each tag below: **Automations → Workflow → New**, trigger = "Tag added" 
 | `module1-17plus` | Reply indicates ages 17+ |
 | `followup-september` | Reply says "September" / asks to be followed up later |
 
-Tags don't need to exist beforehand — the automation creates them via the API on first use if missing. But the *workflow* behind each tag must exist in systeme.io before that tag's first real reply comes in, or the tag gets applied with no email sent.
+Tags don't need to exist beforehand — the automation creates them via the API on first use if missing. But the *rule* behind each tag must exist in systeme.io before that tag's first real reply comes in, or the tag gets applied with no email sent.
 
 ### 3. Point Instantly at the webhook
 
