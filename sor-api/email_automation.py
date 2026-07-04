@@ -300,18 +300,51 @@ def _create_contact(client: httpx.Client, email: str) -> str:
     return str(resp.json()["id"])
 
 
+def _find_tag_id_by_name(client: httpx.Client, tag_name: str) -> str | None:
+    """Search every page of GET /tags for an exact (case/whitespace-insensitive) name match.
+
+    A single-page lookup previously missed tags that existed on later pages once the
+    account accumulated enough tags -- this caused spurious 422s on tag creation for
+    tags that already existed. Capped at 20 pages as a safety net against an unexpected
+    pagination shape looping forever.
+    """
+    target = tag_name.strip().lower()
+    page = 1
+    while page <= 20:
+        resp = client.get(
+            f"{SYSTEME_IO_BASE_URL}/tags",
+            headers=_systeme_headers(),
+            params={"page": page},
+        )
+        _raise_for_status_with_body(resp)
+        items = resp.json().get("items", [])
+        for tag in items:
+            if str(tag.get("name", "")).strip().lower() == target:
+                return str(tag["id"])
+        if not items:
+            return None
+        page += 1
+    return None
+
+
 def _get_or_create_tag_id(client: httpx.Client, tag_name: str) -> str:
-    resp = client.get(f"{SYSTEME_IO_BASE_URL}/tags", headers=_systeme_headers())
-    _raise_for_status_with_body(resp)
-    for tag in resp.json().get("items", []):
-        if tag.get("name") == tag_name:
-            return str(tag["id"])
+    existing_id = _find_tag_id_by_name(client, tag_name)
+    if existing_id:
+        return existing_id
 
     resp = client.post(
         f"{SYSTEME_IO_BASE_URL}/tags",
         headers=_systeme_headers(),
         json={"name": tag_name},
     )
+    if resp.status_code == 422:
+        existing_id = _find_tag_id_by_name(client, tag_name)
+        if existing_id:
+            return existing_id
+        raise SystemeIOError(
+            f"Tag create for {tag_name!r} returned 422 with no matching existing tag "
+            f"found via paginated lookup. systeme.io response body: {resp.text}"
+        )
     _raise_for_status_with_body(resp)
     return str(resp.json()["id"])
 
