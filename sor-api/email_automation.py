@@ -38,18 +38,110 @@ SYSTEME_IO_BASE_URL = "https://api.systeme.io/api"
 CLASSIFIER_MODEL = "claude-haiku-4-5-20251001"
 
 AGE_GROUPS = ["6-9", "10-12", "13-16", "17+"]
+CURRENCIES = ["EUR", "GBP", "USD"]
 
-# Tag names the matching systeme.io automation rule must be built to listen for.
-# "Tag added" -> that rule enrols the contact in the age-appropriate free
-# Module 1 course and subscribes them to the nurture campaign. Must match
-# the tag names created in systeme.io exactly (case-sensitive).
-MODULE1_TAGS = {
+# EU member states (English names as they're likely to appear in a "Person
+# Country" CSV column), used for the EUR bucket. UK is handled separately
+# (GBP). Everything not in either set falls back to USD.
+EU_COUNTRIES = {
+    "austria", "belgium", "bulgaria", "croatia", "cyprus", "czech republic",
+    "czechia", "denmark", "estonia", "finland", "france", "germany",
+    "greece", "hungary", "ireland", "italy", "latvia", "lithuania",
+    "luxembourg", "malta", "netherlands", "the netherlands", "poland",
+    "portugal", "romania", "slovakia", "slovenia", "spain", "sweden",
+}
+UK_NAMES = {"united kingdom", "uk", "great britain", "england", "scotland", "wales", "northern ireland"}
+
+
+def currency_for_country(country: str) -> str:
+    normalized = country.strip().lower()
+    if normalized in UK_NAMES:
+        return "GBP"
+    if normalized in EU_COUNTRIES:
+        return "EUR"
+    return "USD"
+
+
+# Candidate keys to look for the lead's country under in the Instantly
+# webhook payload -- the exact field name Instantly uses for a CSV custom
+# column ("Person Country") wasn't verifiable against live docs while this
+# was written. Checked in order, case/spacing-insensitive, both at the top
+# level of the payload and inside common nested containers for custom lead
+# variables. See README "Go-live checklist" -- confirm/adjust this list
+# against a real payload's raw_payload in /automation/log.
+COUNTRY_FIELD_CANDIDATES = ["person country", "personcountry", "country", "lead country"]
+PAYLOAD_NESTED_CONTAINERS = ["variables", "custom_variables", "lead_data", "custom_fields", "lead_custom_fields"]
+
+
+def _extract_country(payload: dict) -> str | None:
+    def _search(d: dict) -> str | None:
+        normalized_keys = {k.strip().lower().replace("_", " "): k for k in d.keys()}
+        for candidate in COUNTRY_FIELD_CANDIDATES:
+            if candidate in normalized_keys:
+                value = d[normalized_keys[candidate]]
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+        return None
+
+    found = _search(payload)
+    if found:
+        return found
+
+    for container_key in PAYLOAD_NESTED_CONTAINERS:
+        nested = payload.get(container_key)
+        if isinstance(nested, dict):
+            found = _search(nested)
+            if found:
+                return found
+
+    return None
+
+
+# The age tag's systeme.io rule enrols the contact in that age's free
+# Module 1 course and subscribes them to that age's nurture campaign.
+# Currency doesn't need its own tag/rule -- it's written directly onto the
+# contact as custom fields (checkout_link_class, checkout_link_school),
+# which the nurture emails reference via systeme.io merge tags
+# ({checkout_link_class} / {checkout_link_school}). Same email content works
+# for every currency automatically.
+MODULE1_AGE_TAGS = {
     "6-9": "Module-1 Free (6-9yr)",
     "10-12": "Module-1 Free (10-12yr)",
     "13-16": "Module-1 Free (13-16yr)",
     "17+": "Module-1 Free (17+yr)",
 }
 SEPTEMBER_TAG = "Sept26-FollowUp"
+
+# Class licence checkout link is age- and currency-specific (12 pages).
+CHECKOUT_LINKS_CLASS = {
+    "6-9": {
+        "EUR": "https://www.schoolofrecycling.com/wd-p-69-classroom-euro",
+        "GBP": "https://www.schoolofrecycling.com/wd-p-69-classroom-gbp",
+        "USD": "https://www.schoolofrecycling.com/wd-p-69-classroom-usd",
+    },
+    "10-12": {
+        "EUR": "https://www.schoolofrecycling.com/wd-p-1012-classroom-euro",
+        "GBP": "https://www.schoolofrecycling.com/wd-p-1012-classroom-gbp",
+        "USD": "https://www.schoolofrecycling.com/wd-p-1012-classroom-usd",
+    },
+    "13-16": {
+        "EUR": "https://www.schoolofrecycling.com/wd-p-1316-classroom-euro",
+        "GBP": "https://www.schoolofrecycling.com/wd-p-1316-classroom-gbp",
+        "USD": "https://www.schoolofrecycling.com/wd-p-1316-classroom-usd",
+    },
+    "17+": {
+        "EUR": "https://www.schoolofrecycling.com/wd-p-17-classroom-euro",
+        "GBP": "https://www.schoolofrecycling.com/wd-p-17-classroom-gbp",
+        "USD": "https://www.schoolofrecycling.com/wd-p-17-classroom-usd",
+    },
+}
+
+# School licence checkout link is currency-specific only, not age-specific.
+CHECKOUT_LINKS_SCHOOL = {
+    "EUR": "https://www.schoolofrecycling.com/wd-p-school-licence-euro",
+    "GBP": "https://www.schoolofrecycling.com/wd-p-school-licence-gbp",
+    "USD": "https://www.schoolofrecycling.com/wd-p-school-licence-usd",
+}
 
 _anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
@@ -217,19 +309,44 @@ def _get_or_create_tag_id(client: httpx.Client, tag_name: str) -> str:
     return str(resp.json()["id"])
 
 
-def upsert_contact_and_tag(email: str, tag_name: str) -> tuple[str, str]:
-    """Create/find the contact and assign tag_name. Returns (contact_id, tag_id)."""
+def _assign_tag(client: httpx.Client, contact_id: str, tag_name: str) -> str:
+    tag_id = _get_or_create_tag_id(client, tag_name)
+    resp = client.post(
+        f"{SYSTEME_IO_BASE_URL}/contacts/{contact_id}/tags",
+        headers=_systeme_headers(),
+        json={"tagId": int(tag_id)},
+    )
+    _raise_for_status_with_body(resp)
+    return tag_id
+
+
+def _set_custom_fields(client: httpx.Client, contact_id: str, fields: dict[str, str]) -> None:
+    """Set custom field values (e.g. checkout_link_class) on a contact.
+
+    NOTE: the exact update-contact request shape (PATCH vs PUT, "fields" as a
+    slug/value array vs flat keys) wasn't verifiable against live systeme.io
+    docs while this was written -- same blind spot as the other systeme.io
+    calls in this file. If this errors, the response body (surfaced via
+    _raise_for_status_with_body) will show the real expected shape.
+    """
+    resp = client.patch(
+        f"{SYSTEME_IO_BASE_URL}/contacts/{contact_id}",
+        headers={**_systeme_headers(), "Content-Type": "application/merge-patch+json"},
+        json={"fields": [{"slug": slug, "value": value} for slug, value in fields.items()]},
+    )
+    _raise_for_status_with_body(resp)
+
+
+def upsert_contact_and_tags(
+    email: str, tag_names: list[str], custom_fields: dict[str, str] | None = None
+) -> tuple[str, list[str]]:
+    """Create/find the contact once, assign each of tag_names, and set any custom_fields."""
     with httpx.Client(timeout=15) as client:
         contact_id = _create_contact(client, email)
-        tag_id = _get_or_create_tag_id(client, tag_name)
-
-        resp = client.post(
-            f"{SYSTEME_IO_BASE_URL}/contacts/{contact_id}/tags",
-            headers=_systeme_headers(),
-            json={"tagId": int(tag_id)},
-        )
-        _raise_for_status_with_body(resp)
-        return contact_id, tag_id
+        tag_ids = [_assign_tag(client, contact_id, name) for name in tag_names]
+        if custom_fields:
+            _set_custom_fields(client, contact_id, custom_fields)
+        return contact_id, tag_ids
 
 
 # ---------------------------------------------------------------------------
@@ -253,16 +370,19 @@ def _dedupe_key(payload: dict, lead_email: str, reply_text: str) -> str:
 
 
 def _log(conn, dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
-          intent, age_group, language, action, tag_applied, systeme_contact_id, error, raw_payload):
+          intent, age_group, language, country, currency, action, tag_applied,
+          systeme_contact_id, error, raw_payload):
     conn.execute(
         """
         INSERT OR IGNORE INTO reply_automation_log
             (dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
-             intent, age_group, language, action, tag_applied, systeme_contact_id, error, raw_payload)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             intent, age_group, language, country, currency, action, tag_applied,
+             systeme_contact_id, error, raw_payload)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
-         intent, age_group, language, action, tag_applied, systeme_contact_id, error, raw_payload),
+         intent, age_group, language, country, currency, action, tag_applied,
+         systeme_contact_id, error, raw_payload),
     )
     conn.commit()
 
@@ -296,8 +416,8 @@ async def instantly_reply_webhook(
         conn.close()
         return {"status": "duplicate", "dedupe_key": dedupe_key}
 
-    intent, age_group, language, action, tag_applied, systeme_contact_id, error = (
-        "unclear", None, None, "none", None, None, None
+    intent, age_group, language, country, currency, action, tag_applied, systeme_contact_id, error = (
+        "unclear", None, None, None, None, "none", None, None, None
     )
 
     try:
@@ -306,13 +426,28 @@ async def instantly_reply_webhook(
         age_group = classification.get("age_group")
         language = classification.get("language")
 
-        if intent == "age_group_provided" and age_group in MODULE1_TAGS:
-            tag_applied = MODULE1_TAGS[age_group]
-            systeme_contact_id, _ = upsert_contact_and_tag(lead_email, tag_applied)
-            action = "tagged_module1"
+        if intent == "age_group_provided" and age_group in MODULE1_AGE_TAGS:
+            age_tag = MODULE1_AGE_TAGS[age_group]
+            country = _extract_country(payload)
+            custom_fields = None
+            if country is not None:
+                currency = currency_for_country(country)
+                custom_fields = {
+                    "checkout_link_class": CHECKOUT_LINKS_CLASS[age_group][currency],
+                    "checkout_link_school": CHECKOUT_LINKS_SCHOOL[currency],
+                }
+
+            systeme_contact_id, _ = upsert_contact_and_tags(lead_email, [age_tag], custom_fields)
+            tag_applied = age_tag
+
+            if country is None:
+                action = "tagged_module1_currency_pending"
+                error = "Got Module 1 access, but no country field in the webhook payload -- checkout links not set yet."
+            else:
+                action = "tagged_module1"
         elif intent == "september_followup":
             tag_applied = SEPTEMBER_TAG
-            systeme_contact_id, _ = upsert_contact_and_tag(lead_email, tag_applied)
+            systeme_contact_id, _ = upsert_contact_and_tags(lead_email, [SEPTEMBER_TAG])
             action = "tagged_september"
         elif intent == "not_interested":
             action = "logged_not_interested"
@@ -324,8 +459,8 @@ async def instantly_reply_webhook(
 
     _log(
         conn, dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
-        intent, age_group, language, action, tag_applied, systeme_contact_id, error,
-        json.dumps(payload),
+        intent, age_group, language, country, currency, action, tag_applied,
+        systeme_contact_id, error, json.dumps(payload),
     )
     conn.close()
 
@@ -335,6 +470,8 @@ async def instantly_reply_webhook(
         "intent": intent,
         "age_group": age_group,
         "language": language,
+        "country": country,
+        "currency": currency,
         "tag_applied": tag_applied,
         "error": error,
     }
@@ -385,7 +522,16 @@ def automation_stats(_key: str = Depends(require_api_key)):
         r["age_group"]: r["n"]
         for r in conn.execute(
             """SELECT age_group, COUNT(*) AS n FROM reply_automation_log
-               WHERE action = 'tagged_module1' GROUP BY age_group"""
+               WHERE action IN ('tagged_module1', 'tagged_module1_currency_pending')
+               GROUP BY age_group"""
+        ).fetchall()
+    }
+
+    by_currency = {
+        r["currency"]: r["n"]
+        for r in conn.execute(
+            """SELECT currency, COUNT(*) AS n FROM reply_automation_log
+               WHERE action = 'tagged_module1' GROUP BY currency"""
         ).fetchall()
     }
 
@@ -416,10 +562,12 @@ def automation_stats(_key: str = Depends(require_api_key)):
         "total_replies": totals,
         "by_action": by_action,
         "module1_by_age_group": by_age_group,
+        "module1_by_currency": by_currency,
         "by_language": by_language,
         "by_day": by_day,
         "last_received_at": last_received_at,
         "errors": by_action.get("error", 0),
+        "needs_currency_review": by_action.get("tagged_module1_currency_pending", 0),
     }
 
 
@@ -472,13 +620,16 @@ _DASHBOARD_HTML = """<!doctype html>
   <div class="section-title">Free Module 1 sent, by age group</div>
   <div class="cards" id="age-cards"></div>
 
+  <div class="section-title">Free Module 1 sent, by currency</div>
+  <div class="cards" id="currency-cards"></div>
+
   <div class="section-title">Replies by language</div>
   <div class="cards" id="lang-cards"></div>
 
   <div class="section-title">Recent activity</div>
   <div class="wrap">
     <table>
-      <thead><tr><th>Time</th><th>Email</th><th>Lang</th><th>Intent</th><th>Age</th><th>Action</th><th>Error</th></tr></thead>
+      <thead><tr><th>Time</th><th>Email</th><th>Lang</th><th>Intent</th><th>Age</th><th>Country</th><th>Currency</th><th>Action</th><th>Error</th></tr></thead>
       <tbody id="log-body"></tbody>
     </table>
   </div>
@@ -503,10 +654,11 @@ async function load() {
 
   const cards = [
     ["Total replies", stats.total_replies, ""],
-    ["Module 1 sent", stats.by_action.tagged_module1 || 0, ""],
+    ["Module 1 sent", (stats.by_action.tagged_module1 || 0) + (stats.by_action.tagged_module1_currency_pending || 0), ""],
     ["September follow-up", stats.by_action.tagged_september || 0, ""],
     ["Not interested", stats.by_action.logged_not_interested || 0, ""],
     ["Needs review", stats.by_action.logged_unclear || 0, ""],
+    ["Needs currency review", stats.needs_currency_review, stats.needs_currency_review ? "err" : ""],
     ["Errors", stats.errors, "err"],
   ];
   document.getElementById("cards").innerHTML = cards.map(([l, n, cls]) =>
@@ -516,6 +668,11 @@ async function load() {
   const ageGroups = ["6-9", "10-12", "13-16", "17+"];
   document.getElementById("age-cards").innerHTML = ageGroups.map(ag =>
     `<div class="card"><div class="n">${esc(stats.module1_by_age_group[ag] || 0)}</div><div class="l">${esc(ag)}</div></div>`
+  ).join("");
+
+  const currencies = ["EUR", "GBP", "USD"];
+  document.getElementById("currency-cards").innerHTML = currencies.map(c =>
+    `<div class="card"><div class="n">${esc(stats.module1_by_currency[c] || 0)}</div><div class="l">${esc(c)}</div></div>`
   ).join("");
 
   const langEntries = Object.entries(stats.by_language || {});
@@ -532,6 +689,8 @@ async function load() {
       <td>${esc(r.language || '-')}</td>
       <td><span class="pill">${esc(r.intent || '-')}</span></td>
       <td>${esc(r.age_group || '-')}</td>
+      <td>${esc(r.country || '-')}</td>
+      <td>${esc(r.currency || '-')}</td>
       <td>${esc(r.action)}</td>
       <td>${esc(r.error || '')}</td>
     </tr>

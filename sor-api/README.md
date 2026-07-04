@@ -236,19 +236,41 @@ Set `ANTHROPIC_API_KEY`, `SYSTEME_IO_API_KEY`, and `INSTANTLY_WEBHOOK_SECRET` (p
 
 ### 2. Build the systeme.io automation rules (one-time, manual — systeme.io automations are no-code)
 
-Use an **Automation Rule**, not a Workflow — this is a plain "tag added → do two things" action with no delays or branching, which is exactly what Rules are for (Workflows are the visual multi-step builder for when the trigger logic itself needs conditions).
+Use an **Automation Rule**, not a Workflow — this is a plain "tag added → do things" action with no delays or branching, which is exactly what Rules are for (Workflows are the visual multi-step builder for when the trigger logic itself needs conditions).
 
-For each tag below: **Automations → Rules → New Rule**, trigger = "Tag added" with that tag, actions = "Enroll in course" (the matching course, Access type = Partial access, Module = Module 1) + "Subscribe to campaign" (your existing nurture sequence — its timing lives in that Campaign, the rule just enrols the contact into it).
+Only **4 tags** are needed — currency doesn't get its own tag, because the class licence (age-specific) and school licence (currency-specific only) checkout pages differ on two independent axes that a single tag/rule can't cleanly combine (12 tags would've been needed otherwise, and systeme.io's multi-trigger rules are OR, not AND, so they can't combine two tags into one condition either). Instead, currency is written straight onto the contact as custom fields that the (unchanged) age-specific nurture emails read via merge tags.
+
+**4 age tags** — trigger = "Tag added" with that tag, actions = "Enroll in course" (that age's Module 1, Access type = Partial access) + "Subscribe to campaign" (that age's nurture sequence).
 
 | Tag (must match exactly, case-sensitive) | Fires when |
 |---|---|
-| `Module-1 Free (6-9yr)` | Reply indicates ages 6–9 |
-| `Module-1 Free (10-12yr)` | Reply indicates ages 10–12 |
-| `Module-1 Free (13-16yr)` | Reply indicates ages 13–16 |
-| `Module-1 Free (17+yr)` | Reply indicates ages 17+ |
+| `Module-1 Free (6-9yr)` | Ages 6–9 |
+| `Module-1 Free (10-12yr)` | Ages 10–12 |
+| `Module-1 Free (13-16yr)` | Ages 13–16 |
+| `Module-1 Free (17+yr)` | Ages 17+ |
+
+Plus the September tag, unchanged:
+
 | `Sept26-FollowUp` | Reply says "September" / asks to be followed up later |
 
-Tags don't need to exist beforehand — the automation creates them via the API on first use if missing. But the *rule* behind each tag must exist in systeme.io before that tag's first real reply comes in, or the tag gets applied with no email sent.
+**In each of the 4 nurture campaigns' emails**, insert the checkout link using systeme.io's merge tags instead of a hardcoded URL:
+- `{checkout_link_class}` — the class-licence checkout page for that contact's age + currency
+- `{checkout_link_school}` — the school-licence checkout page for that contact's currency (not age-specific)
+
+Both custom fields (`checkout_link_class`, `checkout_link_school`) must exist under Contacts → Settings before this works — confirmed already created.
+
+`sor-api/email_automation.py`'s `MODULE1_AGE_TAGS` holds the 4 tag names, and `CHECKOUT_LINKS_CLASS` / `CHECKOUT_LINKS_SCHOOL` hold the 12 + 3 checkout URLs — update those if any tag names or URLs change.
+
+### Currency routing
+
+Each lead's currency is derived from their country, not from anything in the reply text:
+
+1. The webhook payload is searched for a country field — tries `Person Country`, `country`, `personCountry`, `lead country` (case/spacing-insensitive), both at the top level and inside common nested containers (`variables`, `custom_variables`, `lead_data`, `custom_fields`). **The exact field name Instantly uses for your "Person Country" CSV column wasn't verifiable against live docs while this was built** — same blind spot as the systeme.io API before. Check a real reply's `raw_payload` in `/automation/log` and adjust `COUNTRY_FIELD_CANDIDATES` in `email_automation.py` if it guessed wrong.
+2. Country → currency: United Kingdom → GBP, EU member states → EUR, everything else (including non-EU Europe like Switzerland/Norway) → USD. Change `EU_COUNTRIES`/`UK_NAMES`/`currency_for_country()` if that's not the split you want.
+3. If no country field can be found at all, the age tag is still applied (the lead gets free Module 1 access right away) but the two checkout-link custom fields are left unset — logged as `action = tagged_module1_currency_pending`, visible on the dashboard under "Needs currency review", so the checkout links can be filled in manually without blocking course access. Sending a wrong-currency (or blank) checkout link is worse than a short delay, so this never guesses.
+4. **The exact systeme.io request shape for setting a contact's custom fields (`_set_custom_fields` in `email_automation.py`) is also unverified against live docs** — same pattern as everywhere else in this integration. If it errors, `/automation/log`'s error column will show systeme.io's real response body (per the diagnostic fix earlier), which will say exactly what shape it actually expects.
+
+Tags don't need to exist beforehand — the automation creates them via the API on first use if missing. But the *rule* behind each tag must exist in systeme.io before that tag's first real reply comes in, or the tag gets applied with no action taken.
 
 ### 3. Point Instantly at the webhook
 

@@ -64,6 +64,8 @@ def init_db():
             intent TEXT,
             age_group TEXT,
             language TEXT,
+            country TEXT,
+            currency TEXT,
             action TEXT NOT NULL DEFAULT 'none',
             tag_applied TEXT,
             systeme_contact_id TEXT,
