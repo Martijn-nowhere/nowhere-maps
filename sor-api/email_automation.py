@@ -644,13 +644,26 @@ function esc(s) {
   }[c]));
 }
 
+// received_at is stored as UTC ("YYYY-MM-DD HH:MM:SS", no timezone marker --
+// SQLite's datetime('now')). Treat it as UTC explicitly, then render in
+// whoever's viewing the dashboard's own local timezone.
+function toLocal(utcString) {
+  if (!utcString) return utcString;
+  const d = new Date(utcString.replace(" ", "T") + "Z");
+  if (isNaN(d.getTime())) return utcString;
+  return d.toLocaleString(undefined, {
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+}
+
 async function load() {
   const [stats, log] = await Promise.all([
     fetch("/automation/stats", { headers }).then(r => r.json()),
     fetch("/automation/log?limit=100", { headers }).then(r => r.json()),
   ]);
 
-  document.getElementById("last").textContent = stats.last_received_at || "no replies yet";
+  document.getElementById("last").textContent = stats.last_received_at ? toLocal(stats.last_received_at) : "no replies yet";
 
   const cards = [
     ["Total replies", stats.total_replies, ""],
@@ -684,7 +697,7 @@ async function load() {
 
   document.getElementById("log-body").innerHTML = log.map(r => `
     <tr class="${r.error ? 'error' : ''}">
-      <td>${esc(r.received_at)}</td>
+      <td>${esc(toLocal(r.received_at))}</td>
       <td>${esc(r.lead_email)}</td>
       <td>${esc(r.language || '-')}</td>
       <td><span class="pill">${esc(r.intent || '-')}</span></td>
