@@ -97,23 +97,51 @@ def _extract_country(payload: dict) -> str | None:
     return None
 
 
-# Age and currency are independent concerns, tagged separately: the age tag's
-# rule only enrols the contact in that age's free Module 1 course; the
-# currency tag's rule only subscribes the contact to that currency's nurture
-# campaign (where the checkout links live). A contact gets both tags applied.
+# The age tag's systeme.io rule enrols the contact in that age's free
+# Module 1 course and subscribes them to that age's nurture campaign.
+# Currency doesn't need its own tag/rule -- it's written directly onto the
+# contact as custom fields (checkout_link_class, checkout_link_school),
+# which the nurture emails reference via systeme.io merge tags
+# ({checkout_link_class} / {checkout_link_school}). Same email content works
+# for every currency automatically.
 MODULE1_AGE_TAGS = {
     "6-9": "Module-1 Free (6-9yr)",
     "10-12": "Module-1 Free (10-12yr)",
     "13-16": "Module-1 Free (13-16yr)",
     "17+": "Module-1 Free (17+yr)",
 }
-# PLACEHOLDER naming -- confirm/replace with the actual 3 currency tags once created in systeme.io.
-CURRENCY_TAGS = {
-    "EUR": "Nurture-EUR",
-    "GBP": "Nurture-GBP",
-    "USD": "Nurture-USD",
-}
 SEPTEMBER_TAG = "Sept26-FollowUp"
+
+# Class licence checkout link is age- and currency-specific (12 pages).
+CHECKOUT_LINKS_CLASS = {
+    "6-9": {
+        "EUR": "https://www.schoolofrecycling.com/wd-p-69-classroom-euro",
+        "GBP": "https://www.schoolofrecycling.com/wd-p-69-classroom-gbp",
+        "USD": "https://www.schoolofrecycling.com/wd-p-69-classroom-usd",
+    },
+    "10-12": {
+        "EUR": "https://www.schoolofrecycling.com/wd-p-1012-classroom-euro",
+        "GBP": "https://www.schoolofrecycling.com/wd-p-1012-classroom-gbp",
+        "USD": "https://www.schoolofrecycling.com/wd-p-1012-classroom-usd",
+    },
+    "13-16": {
+        "EUR": "https://www.schoolofrecycling.com/wd-p-1316-classroom-euro",
+        "GBP": "https://www.schoolofrecycling.com/wd-p-1316-classroom-gbp",
+        "USD": "https://www.schoolofrecycling.com/wd-p-1316-classroom-usd",
+    },
+    "17+": {
+        "EUR": "https://www.schoolofrecycling.com/wd-p-17-classroom-euro",
+        "GBP": "https://www.schoolofrecycling.com/wd-p-17-classroom-gbp",
+        "USD": "https://www.schoolofrecycling.com/wd-p-17-classroom-usd",
+    },
+}
+
+# School licence checkout link is currency-specific only, not age-specific.
+CHECKOUT_LINKS_SCHOOL = {
+    "EUR": "https://www.schoolofrecycling.com/wd-p-school-licence-euro",
+    "GBP": "https://www.schoolofrecycling.com/wd-p-school-licence-gbp",
+    "USD": "https://www.schoolofrecycling.com/wd-p-school-licence-usd",
+}
 
 _anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
@@ -292,11 +320,32 @@ def _assign_tag(client: httpx.Client, contact_id: str, tag_name: str) -> str:
     return tag_id
 
 
-def upsert_contact_and_tags(email: str, tag_names: list[str]) -> tuple[str, list[str]]:
-    """Create/find the contact once and assign each of tag_names. Returns (contact_id, tag_ids)."""
+def _set_custom_fields(client: httpx.Client, contact_id: str, fields: dict[str, str]) -> None:
+    """Set custom field values (e.g. checkout_link_class) on a contact.
+
+    NOTE: the exact update-contact request shape (PATCH vs PUT, "fields" as a
+    slug/value array vs flat keys) wasn't verifiable against live systeme.io
+    docs while this was written -- same blind spot as the other systeme.io
+    calls in this file. If this errors, the response body (surfaced via
+    _raise_for_status_with_body) will show the real expected shape.
+    """
+    resp = client.patch(
+        f"{SYSTEME_IO_BASE_URL}/contacts/{contact_id}",
+        headers={**_systeme_headers(), "Content-Type": "application/merge-patch+json"},
+        json={"fields": [{"slug": slug, "value": value} for slug, value in fields.items()]},
+    )
+    _raise_for_status_with_body(resp)
+
+
+def upsert_contact_and_tags(
+    email: str, tag_names: list[str], custom_fields: dict[str, str] | None = None
+) -> tuple[str, list[str]]:
+    """Create/find the contact once, assign each of tag_names, and set any custom_fields."""
     with httpx.Client(timeout=15) as client:
         contact_id = _create_contact(client, email)
         tag_ids = [_assign_tag(client, contact_id, name) for name in tag_names]
+        if custom_fields:
+            _set_custom_fields(client, contact_id, custom_fields)
         return contact_id, tag_ids
 
 
@@ -378,18 +427,22 @@ async def instantly_reply_webhook(
         language = classification.get("language")
 
         if intent == "age_group_provided" and age_group in MODULE1_AGE_TAGS:
-            tags_to_apply = [MODULE1_AGE_TAGS[age_group]]
+            age_tag = MODULE1_AGE_TAGS[age_group]
             country = _extract_country(payload)
+            custom_fields = None
             if country is not None:
                 currency = currency_for_country(country)
-                tags_to_apply.append(CURRENCY_TAGS[currency])
+                custom_fields = {
+                    "checkout_link_class": CHECKOUT_LINKS_CLASS[age_group][currency],
+                    "checkout_link_school": CHECKOUT_LINKS_SCHOOL[currency],
+                }
 
-            systeme_contact_id, _ = upsert_contact_and_tags(lead_email, tags_to_apply)
-            tag_applied = ", ".join(tags_to_apply)
+            systeme_contact_id, _ = upsert_contact_and_tags(lead_email, [age_tag], custom_fields)
+            tag_applied = age_tag
 
             if country is None:
                 action = "tagged_module1_currency_pending"
-                error = "Got Module 1 access, but no country field in the webhook payload -- currency/nurture campaign not assigned yet."
+                error = "Got Module 1 access, but no country field in the webhook payload -- checkout links not set yet."
             else:
                 action = "tagged_module1"
         elif intent == "september_followup":
