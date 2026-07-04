@@ -113,34 +113,41 @@ MODULE1_AGE_TAGS = {
 SEPTEMBER_TAG = "Sept26-FollowUp"
 
 # Class licence checkout link is age- and currency-specific (12 pages).
+# NOTE: stored WITHOUT the "https://" scheme on purpose. systeme.io's link
+# editor forces its own "https://" in front of whatever's typed into a link's
+# URL field, and pairing that with a merge-tag value that also starts with
+# "https://" produced a corrupted link in testing (the substituted value's
+# colon got dropped, e.g. "https//www.schoolofrecycling.com/..." -> broken
+# DNS lookup). Keeping the scheme out of the stored value avoids the
+# collision entirely, regardless of the exact cause on systeme.io's end.
 CHECKOUT_LINKS_CLASS = {
     "6-9": {
-        "EUR": "https://www.schoolofrecycling.com/wd-p-69-classroom-euro",
-        "GBP": "https://www.schoolofrecycling.com/wd-p-69-classroom-gbp",
-        "USD": "https://www.schoolofrecycling.com/wd-p-69-classroom-usd",
+        "EUR": "www.schoolofrecycling.com/wd-p-69-classroom-euro",
+        "GBP": "www.schoolofrecycling.com/wd-p-69-classroom-gbp",
+        "USD": "www.schoolofrecycling.com/wd-p-69-classroom-usd",
     },
     "10-12": {
-        "EUR": "https://www.schoolofrecycling.com/wd-p-1012-classroom-euro",
-        "GBP": "https://www.schoolofrecycling.com/wd-p-1012-classroom-gbp",
-        "USD": "https://www.schoolofrecycling.com/wd-p-1012-classroom-usd",
+        "EUR": "www.schoolofrecycling.com/wd-p-1012-classroom-euro",
+        "GBP": "www.schoolofrecycling.com/wd-p-1012-classroom-gbp",
+        "USD": "www.schoolofrecycling.com/wd-p-1012-classroom-usd",
     },
     "13-16": {
-        "EUR": "https://www.schoolofrecycling.com/wd-p-1316-classroom-euro",
-        "GBP": "https://www.schoolofrecycling.com/wd-p-1316-classroom-gbp",
-        "USD": "https://www.schoolofrecycling.com/wd-p-1316-classroom-usd",
+        "EUR": "www.schoolofrecycling.com/wd-p-1316-classroom-euro",
+        "GBP": "www.schoolofrecycling.com/wd-p-1316-classroom-gbp",
+        "USD": "www.schoolofrecycling.com/wd-p-1316-classroom-usd",
     },
     "17+": {
-        "EUR": "https://www.schoolofrecycling.com/wd-p-17-classroom-euro",
-        "GBP": "https://www.schoolofrecycling.com/wd-p-17-classroom-gbp",
-        "USD": "https://www.schoolofrecycling.com/wd-p-17-classroom-usd",
+        "EUR": "www.schoolofrecycling.com/wd-p-17-classroom-euro",
+        "GBP": "www.schoolofrecycling.com/wd-p-17-classroom-gbp",
+        "USD": "www.schoolofrecycling.com/wd-p-17-classroom-usd",
     },
 }
 
 # School licence checkout link is currency-specific only, not age-specific.
 CHECKOUT_LINKS_SCHOOL = {
-    "EUR": "https://www.schoolofrecycling.com/wd-p-school-licence-euro",
-    "GBP": "https://www.schoolofrecycling.com/wd-p-school-licence-gbp",
-    "USD": "https://www.schoolofrecycling.com/wd-p-school-licence-usd",
+    "EUR": "www.schoolofrecycling.com/wd-p-school-licence-euro",
+    "GBP": "www.schoolofrecycling.com/wd-p-school-licence-gbp",
+    "USD": "www.schoolofrecycling.com/wd-p-school-licence-usd",
 }
 
 _anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None

@@ -259,7 +259,9 @@ Plus the September tag, unchanged:
 
 Both custom fields (`checkout_link_class`, `checkout_link_school`) must exist under Contacts → Settings before this works — confirmed already created.
 
-`sor-api/email_automation.py`'s `MODULE1_AGE_TAGS` holds the 4 tag names, and `CHECKOUT_LINKS_CLASS` / `CHECKOUT_LINKS_SCHOOL` hold the 12 + 3 checkout URLs — update those if any tag names or URLs change.
+**When setting up the link in the email editor**, just type the merge tag (e.g. `{checkout_link_class}`) directly into the link's URL field — don't add `https://` yourself in front of it. systeme.io's link field already forces its own `https://` prefix onto whatever's typed there, and the stored custom field values deliberately omit the scheme (see below) to avoid a real bug found in testing: pairing systeme.io's forced prefix with a merge-tag value that *also* started with `https://` produced a corrupted link (`https://https//www.schoolofrecycling.com/...` — the merge-tag-substituted colon got dropped, breaking the URL / DNS lookup). Confirmed fixed once the stored values stopped including the scheme.
+
+`sor-api/email_automation.py`'s `MODULE1_AGE_TAGS` holds the 4 tag names, and `CHECKOUT_LINKS_CLASS` / `CHECKOUT_LINKS_SCHOOL` hold the 12 + 3 checkout URLs (stored **without** `https://` — see above) — update those if any tag names or URLs change, and keep the scheme off.
 
 ### Currency routing
 
