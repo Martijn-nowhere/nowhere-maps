@@ -611,6 +611,45 @@ def automation_stats(_key: str = Depends(require_api_key)):
     }
 
 
+@router.get(
+    "/automation/debug/systeme-tags",
+    tags=["Automation", "Gated"],
+    summary="TEMPORARY: raw systeme.io GET /tags response, for diagnosing the tag-lookup bug (requires X-API-Key)",
+)
+def debug_systeme_tags(name: str = "", page: int = 1, _key: str = Depends(require_api_key)):
+    """Hits systeme.io's GET /tags directly and returns it close to raw, so we can see
+    the actual response shape (pagination fields, exact tag name strings) instead of
+    guessing. Pass ?name=... to also report whether that exact string is present."""
+    with httpx.Client(timeout=15) as client:
+        resp = client.get(
+            f"{SYSTEME_IO_BASE_URL}/tags",
+            headers=_systeme_headers(),
+            params={"page": page},
+        )
+    body = resp.text
+    try:
+        parsed = resp.json()
+    except ValueError:
+        parsed = None
+
+    items = parsed.get("items", []) if isinstance(parsed, dict) else None
+    result = {
+        "status_code": resp.status_code,
+        "top_level_keys": list(parsed.keys()) if isinstance(parsed, dict) else None,
+        "items_count_this_page": len(items) if items is not None else None,
+        "item_names_this_page": [t.get("name") for t in items] if items is not None else None,
+        "raw_body": body[:4000],
+    }
+    if name:
+        result["exact_match_found_this_page"] = bool(
+            items and any(t.get("name") == name for t in items)
+        )
+        result["case_insensitive_match_found_this_page"] = bool(
+            items and any(str(t.get("name", "")).strip().lower() == name.strip().lower() for t in items)
+        )
+    return result
+
+
 @router.get("/dashboard", tags=["Automation"], summary="HTML dashboard for reply automation (requires ?key=)")
 def dashboard(key: str = ""):
     if not is_valid_key(key):
