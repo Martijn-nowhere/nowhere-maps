@@ -301,29 +301,36 @@ def _create_contact(client: httpx.Client, email: str) -> str:
 
 
 def _find_tag_id_by_name(client: httpx.Client, tag_name: str) -> str | None:
-    """Search every page of GET /tags for an exact (case/whitespace-insensitive) name match.
+    """Search GET /tags for an exact (case/whitespace-insensitive) name match.
 
-    A single-page lookup previously missed tags that existed on later pages once the
-    account accumulated enough tags -- this caused spurious 422s on tag creation for
-    tags that already existed. Capped at 20 pages as a safety net against an unexpected
-    pagination shape looping forever.
+    systeme.io uses cursor pagination, not a page number: each response has
+    "items" + "hasMore", and the next page is fetched via
+    startingAfter=<id of the last item just received>. Confirmed via
+    /automation/debug/systeme-tags against the live API -- a "page" query
+    param (tried first) is silently ignored and always returns the same
+    first page, which is why that approach missed tags that existed further
+    back in the list. Capped at 20 iterations as a safety net.
     """
     target = tag_name.strip().lower()
-    page = 1
-    while page <= 20:
+    starting_after = None
+    for _ in range(20):
+        params = {"limit": 100}
+        if starting_after is not None:
+            params["startingAfter"] = starting_after
         resp = client.get(
             f"{SYSTEME_IO_BASE_URL}/tags",
             headers=_systeme_headers(),
-            params={"page": page},
+            params=params,
         )
         _raise_for_status_with_body(resp)
-        items = resp.json().get("items", [])
+        data = resp.json()
+        items = data.get("items", [])
         for tag in items:
             if str(tag.get("name", "")).strip().lower() == target:
                 return str(tag["id"])
-        if not items:
+        if not items or not data.get("hasMore"):
             return None
-        page += 1
+        starting_after = items[-1]["id"]
     return None
 
 
