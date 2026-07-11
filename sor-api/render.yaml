@@ -16,6 +16,10 @@ services:
         sync: false
       - key: INSTANTLY_WEBHOOK_SECRET
         sync: false
+      - key: INSTANTLY_MODULE1_CAMPAIGN_IDS
+        sync: false
+      - key: INSTANTLY_SCHOOLS_CAMPAIGN_IDS
+        sync: false
     disk:
       name: sor-data
       mountPath: /data

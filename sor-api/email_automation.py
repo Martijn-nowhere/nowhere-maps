@@ -112,6 +112,36 @@ MODULE1_AGE_TAGS = {
 }
 SEPTEMBER_TAG = "Sept26-FollowUp"
 
+
+# Campaign registries -- maps campaign_id -> handler.
+# Loads from environment variables: INSTANTLY_MODULE1_CAMPAIGN_IDS, INSTANTLY_SCHOOLS_CAMPAIGN_IDS, etc.
+# Each should be a comma-separated list of campaign IDs. Multiple campaigns of the same type
+# are routed to the same handler.
+def _load_campaign_registries() -> dict[str, set[str]]:
+    registries = {}
+    module1_ids = os.getenv("INSTANTLY_MODULE1_CAMPAIGN_IDS", "").strip()
+    if module1_ids:
+        registries["module1"] = {id.strip() for id in module1_ids.split(",") if id.strip()}
+
+    schools_ids = os.getenv("INSTANTLY_SCHOOLS_CAMPAIGN_IDS", "").strip()
+    if schools_ids:
+        registries["schools"] = {id.strip() for id in schools_ids.split(",") if id.strip()}
+
+    return registries
+
+CAMPAIGN_REGISTRIES = _load_campaign_registries()
+
+
+def _get_campaign_type(campaign_id: str | None) -> str | None:
+    """Determine which campaign type this campaign_id belongs to."""
+    if not campaign_id:
+        return None
+    for ctype, ids in CAMPAIGN_REGISTRIES.items():
+        if campaign_id in ids:
+            return ctype
+    return None
+
+
 # Class licence checkout link is age- and currency-specific (12 pages).
 # NOTE: stored WITHOUT the "https://" scheme on purpose. systeme.io's link
 # editor forces its own "https://" in front of whatever's typed into a link's
@@ -397,6 +427,95 @@ def upsert_contact_and_tags(
 
 
 # ---------------------------------------------------------------------------
+# Campaign handlers
+# ---------------------------------------------------------------------------
+
+async def handle_module1_campaign(
+    payload: dict,
+    lead_email: str,
+    reply_text: str,
+    reply_subject: str,
+    campaign_id: str,
+    conn,
+) -> tuple[str, str | None, str | None, str | None, str | None, str | None, str | None, str | None, str | None]:
+    """Handler for teacher/age-group campaigns -> free Module 1 enrollment.
+
+    Returns: (action, intent, age_group, language, country, currency, tag_applied, systeme_contact_id, error)
+    """
+    intent = "unclear"
+    age_group = None
+    language = None
+    country = None
+    currency = None
+    action = "none"
+    tag_applied = None
+    systeme_contact_id = None
+    error = None
+
+    try:
+        classification = classify_reply(reply_text, reply_subject)
+        intent = classification.get("intent", "unclear")
+        age_group = classification.get("age_group")
+        language = classification.get("language")
+
+        if intent == "age_group_provided" and age_group in MODULE1_AGE_TAGS:
+            age_tag = MODULE1_AGE_TAGS[age_group]
+            country = _extract_country(payload)
+            custom_fields = None
+            if country is not None:
+                currency = currency_for_country(country)
+                custom_fields = {
+                    "checkout_link_class": CHECKOUT_LINKS_CLASS[age_group][currency],
+                    "checkout_link_school": CHECKOUT_LINKS_SCHOOL[currency],
+                }
+
+            systeme_contact_id, _ = upsert_contact_and_tags(lead_email, [age_tag], custom_fields)
+            tag_applied = age_tag
+
+            if country is None:
+                action = "tagged_module1_currency_pending"
+                error = "Got Module 1 access, but no country field in the webhook payload -- checkout links not set yet."
+            else:
+                action = "tagged_module1"
+        elif intent == "september_followup":
+            tag_applied = SEPTEMBER_TAG
+            systeme_contact_id, _ = upsert_contact_and_tags(lead_email, [SEPTEMBER_TAG])
+            action = "tagged_september"
+        elif intent == "not_interested":
+            action = "logged_not_interested"
+        else:
+            action = "logged_unclear"
+    except (SystemeIOError, httpx.HTTPError, RuntimeError) as exc:
+        error = str(exc)
+        action = "error"
+
+    return action, intent, age_group, language, country, currency, tag_applied, systeme_contact_id, error
+
+
+async def handle_schools_campaign(
+    payload: dict,
+    lead_email: str,
+    reply_text: str,
+    reply_subject: str,
+    campaign_id: str,
+    conn,
+) -> tuple[str, str | None, str | None, str | None, str | None, str | None, str | None, str | None, str | None]:
+    """Handler for school decision-maker campaigns.
+
+    Stub for August implementation. For now, just log the reply.
+    Returns: (action, intent, age_group, language, country, currency, tag_applied, systeme_contact_id, error)
+    """
+    # Placeholder: classify to extract language, but don't take any action
+    language = None
+    try:
+        classification = classify_reply(reply_text, reply_subject)
+        language = classification.get("language")
+    except Exception:
+        pass
+    return "logged_schools_campaign", None, None, language, None, None, None, None, None
+
+
+# ---------------------------------------------------------------------------
 # Webhook
 # ---------------------------------------------------------------------------
 
@@ -453,6 +572,11 @@ async def instantly_reply_webhook(
     if not lead_email or not reply_text:
         raise HTTPException(status_code=422, detail="Payload missing lead_email or reply_text.")
 
+    # Determine campaign type and check if it's registered
+    campaign_type = _get_campaign_type(campaign_id)
+    if campaign_type is None:
+        return {"status": "ignored", "reason": f"campaign_id={campaign_id!r} not in any registered campaign type"}
+
     dedupe_key = _dedupe_key(payload, lead_email, reply_text)
     conn = get_db()
 
@@ -463,46 +587,20 @@ async def instantly_reply_webhook(
         conn.close()
         return {"status": "duplicate", "dedupe_key": dedupe_key}
 
-    intent, age_group, language, country, currency, action, tag_applied, systeme_contact_id, error = (
-        "unclear", None, None, None, None, "none", None, None, None
+    # Route to the appropriate handler based on campaign type
+    handlers = {
+        "module1": handle_module1_campaign,
+        "schools": handle_schools_campaign,
+    }
+    handler = handlers.get(campaign_type)
+
+    if handler is None:
+        conn.close()
+        return {"status": "error", "reason": f"No handler for campaign type {campaign_type!r}"}
+
+    action, intent, age_group, language, country, currency, tag_applied, systeme_contact_id, error = (
+        await handler(payload, lead_email, reply_text, reply_subject, campaign_id, conn)
     )
-
-    try:
-        classification = classify_reply(reply_text, reply_subject)
-        intent = classification.get("intent", "unclear")
-        age_group = classification.get("age_group")
-        language = classification.get("language")
-
-        if intent == "age_group_provided" and age_group in MODULE1_AGE_TAGS:
-            age_tag = MODULE1_AGE_TAGS[age_group]
-            country = _extract_country(payload)
-            custom_fields = None
-            if country is not None:
-                currency = currency_for_country(country)
-                custom_fields = {
-                    "checkout_link_class": CHECKOUT_LINKS_CLASS[age_group][currency],
-                    "checkout_link_school": CHECKOUT_LINKS_SCHOOL[currency],
-                }
-
-            systeme_contact_id, _ = upsert_contact_and_tags(lead_email, [age_tag], custom_fields)
-            tag_applied = age_tag
-
-            if country is None:
-                action = "tagged_module1_currency_pending"
-                error = "Got Module 1 access, but no country field in the webhook payload -- checkout links not set yet."
-            else:
-                action = "tagged_module1"
-        elif intent == "september_followup":
-            tag_applied = SEPTEMBER_TAG
-            systeme_contact_id, _ = upsert_contact_and_tags(lead_email, [SEPTEMBER_TAG])
-            action = "tagged_september"
-        elif intent == "not_interested":
-            action = "logged_not_interested"
-        else:
-            action = "logged_unclear"
-    except (SystemeIOError, httpx.HTTPError, RuntimeError) as exc:
-        error = str(exc)
-        action = "error"
 
     _log(
         conn, dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
