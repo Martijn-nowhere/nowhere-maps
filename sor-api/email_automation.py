@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 
 from auth import is_valid_key, require_api_key
-from database import get_db, log_reply_to_supabase, get_logs_from_supabase, get_stats_from_supabase
+from database import get_db, get_supabase_conn, log_reply_to_supabase, get_logs_from_supabase, get_stats_from_supabase, SUPABASE_DB_URL
 
 router = APIRouter()
 
@@ -624,6 +624,34 @@ def automation_log(
 )
 def automation_stats(_key: str = Depends(require_api_key)):
     return get_stats_from_supabase()
+
+
+@router.get(
+    "/automation/debug/supabase",
+    tags=["Automation", "Gated"],
+    summary="TEMPORARY: check whether SUPABASE_DB_URL is set and reachable (requires X-API-Key)",
+)
+def debug_supabase(_key: str = Depends(require_api_key)):
+    if not SUPABASE_DB_URL:
+        return {"env_var_set": False, "detail": "SUPABASE_DB_URL is empty or not set in this process."}
+
+    result = {
+        "env_var_set": True,
+        "env_var_length": len(SUPABASE_DB_URL),
+        "env_var_prefix": SUPABASE_DB_URL[:20],
+    }
+    try:
+        conn = get_supabase_conn()
+        c = conn.cursor()
+        c.execute("SELECT to_regclass('public.reply_automation_log')")
+        table_exists = c.fetchone()[0] is not None
+        conn.close()
+        result["connected"] = True
+        result["table_exists"] = table_exists
+    except Exception as e:
+        result["connected"] = False
+        result["error"] = str(e)
+    return result
 
 
 @router.get(
