@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 
 from auth import is_valid_key, require_api_key
-from database import get_db
+from database import get_db, get_supabase_conn, log_reply_to_supabase, get_logs_from_supabase, get_stats_from_supabase, SUPABASE_DB_URL
 
 router = APIRouter()
 
@@ -111,6 +111,36 @@ MODULE1_AGE_TAGS = {
     "17+": "Module-1 Free (17+yr)",
 }
 SEPTEMBER_TAG = "Sept26-FollowUp"
+
+
+# Campaign registries -- maps campaign_id -> handler.
+# Loads from environment variables: INSTANTLY_MODULE1_CAMPAIGN_IDS, INSTANTLY_SCHOOLS_CAMPAIGN_IDS, etc.
+# Each should be a comma-separated list of campaign IDs. Multiple campaigns of the same type
+# are routed to the same handler.
+def _load_campaign_registries() -> dict[str, set[str]]:
+    registries = {}
+    module1_ids = os.getenv("INSTANTLY_MODULE1_CAMPAIGN_IDS", "").strip()
+    if module1_ids:
+        registries["module1"] = {id.strip() for id in module1_ids.split(",") if id.strip()}
+
+    schools_ids = os.getenv("INSTANTLY_SCHOOLS_CAMPAIGN_IDS", "").strip()
+    if schools_ids:
+        registries["schools"] = {id.strip() for id in schools_ids.split(",") if id.strip()}
+
+    return registries
+
+CAMPAIGN_REGISTRIES = _load_campaign_registries()
+
+
+def _get_campaign_type(campaign_id: str | None) -> str | None:
+    """Determine which campaign type this campaign_id belongs to."""
+    if not campaign_id:
+        return None
+    for ctype, ids in CAMPAIGN_REGISTRIES.items():
+        if campaign_id in ids:
+            return ctype
+    return None
+
 
 # Class licence checkout link is age- and currency-specific (12 pages).
 # NOTE: stored WITHOUT the "https://" scheme on purpose. systeme.io's link
@@ -397,75 +427,30 @@ def upsert_contact_and_tags(
 
 
 # ---------------------------------------------------------------------------
-# Webhook
+# Campaign handlers
 # ---------------------------------------------------------------------------
 
-def _verify_webhook_secret(request: Request, x_webhook_secret: str | None) -> None:
-    if not INSTANTLY_WEBHOOK_SECRET:
-        return  # not configured yet -- allow through during setup/testing
-    provided = x_webhook_secret or request.query_params.get("secret")
-    if provided != INSTANTLY_WEBHOOK_SECRET:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid webhook secret.")
+async def handle_module1_campaign(
+    payload: dict,
+    lead_email: str,
+    reply_text: str,
+    reply_subject: str,
+    campaign_id: str,
+    conn,
+) -> tuple[str, str | None, str | None, str | None, str | None, str | None, str | None, str | None, str | None]:
+    """Handler for teacher/age-group campaigns -> free Module 1 enrollment.
 
-
-def _dedupe_key(payload: dict, lead_email: str, reply_text: str) -> str:
-    explicit_id = payload.get("event_id") or payload.get("id") or payload.get("reply_id")
-    if explicit_id:
-        return f"id:{explicit_id}"
-    raw = f"{lead_email}|{payload.get('campaign_id', '')}|{reply_text}"
-    return "hash:" + hashlib.sha256(raw.encode()).hexdigest()
-
-
-def _log(conn, dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
-          intent, age_group, language, country, currency, action, tag_applied,
-          systeme_contact_id, error, raw_payload):
-    conn.execute(
-        """
-        INSERT OR IGNORE INTO reply_automation_log
-            (dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
-             intent, age_group, language, country, currency, action, tag_applied,
-             systeme_contact_id, error, raw_payload)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
-         intent, age_group, language, country, currency, action, tag_applied,
-         systeme_contact_id, error, raw_payload),
-    )
-    conn.commit()
-
-
-@router.post("/webhooks/instantly-reply", tags=["Automation"], summary="Instantly reply webhook")
-async def instantly_reply_webhook(
-    request: Request,
-    x_webhook_secret: str | None = Header(default=None),
-):
-    _verify_webhook_secret(request, x_webhook_secret)
-    payload = await request.json()
-
-    if payload.get("event_type") != "reply_received":
-        return {"status": "ignored", "reason": f"event_type={payload.get('event_type')!r}"}
-
-    lead_email = payload.get("lead_email")
-    reply_text = payload.get("reply_text") or payload.get("reply_text_snippet") or ""
-    reply_subject = payload.get("reply_subject", "")
-    campaign_id = payload.get("campaign_id")
-
-    if not lead_email or not reply_text:
-        raise HTTPException(status_code=422, detail="Payload missing lead_email or reply_text.")
-
-    dedupe_key = _dedupe_key(payload, lead_email, reply_text)
-    conn = get_db()
-
-    existing = conn.execute(
-        "SELECT id FROM reply_automation_log WHERE dedupe_key = ?", (dedupe_key,)
-    ).fetchone()
-    if existing:
-        conn.close()
-        return {"status": "duplicate", "dedupe_key": dedupe_key}
-
-    intent, age_group, language, country, currency, action, tag_applied, systeme_contact_id, error = (
-        "unclear", None, None, None, None, "none", None, None, None
-    )
+    Returns: (action, intent, age_group, language, country, currency, tag_applied, systeme_contact_id, error)
+    """
+    intent = "unclear"
+    age_group = None
+    language = None
+    country = None
+    currency = None
+    action = "none"
+    tag_applied = None
+    systeme_contact_id = None
+    error = None
 
     try:
         classification = classify_reply(reply_text, reply_subject)
@@ -504,8 +489,103 @@ async def instantly_reply_webhook(
         error = str(exc)
         action = "error"
 
-    _log(
-        conn, dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
+    return action, intent, age_group, language, country, currency, tag_applied, systeme_contact_id, error
+
+
+async def handle_schools_campaign(
+    payload: dict,
+    lead_email: str,
+    reply_text: str,
+    reply_subject: str,
+    campaign_id: str,
+    conn,
+) -> tuple[str, str | None, str | None, str | None, str | None, str | None, str | None, str | None, str | None]:
+    """Handler for school decision-maker campaigns.
+
+    Stub for August implementation. For now, just log the reply.
+    Returns: (action, intent, age_group, language, country, currency, tag_applied, systeme_contact_id, error)
+    """
+    # Placeholder: classify to extract language, but don't take any action
+    language = None
+    try:
+        classification = classify_reply(reply_text, reply_subject)
+        language = classification.get("language")
+    except Exception:
+        pass
+    return "logged_schools_campaign", None, None, language, None, None, None, None, None
+
+
+# ---------------------------------------------------------------------------
+# Webhook
+# ---------------------------------------------------------------------------
+
+def _verify_webhook_secret(request: Request, x_webhook_secret: str | None) -> None:
+    if not INSTANTLY_WEBHOOK_SECRET:
+        return  # not configured yet -- allow through during setup/testing
+    provided = x_webhook_secret or request.query_params.get("secret")
+    if provided != INSTANTLY_WEBHOOK_SECRET:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid webhook secret.")
+
+
+def _dedupe_key(payload: dict, lead_email: str, reply_text: str) -> str:
+    explicit_id = payload.get("event_id") or payload.get("id") or payload.get("reply_id")
+    if explicit_id:
+        return f"id:{explicit_id}"
+    raw = f"{lead_email}|{payload.get('campaign_id', '')}|{reply_text}"
+    return "hash:" + hashlib.sha256(raw.encode()).hexdigest()
+
+
+@router.post("/webhooks/instantly-reply", tags=["Automation"], summary="Instantly reply webhook")
+async def instantly_reply_webhook(
+    request: Request,
+    x_webhook_secret: str | None = Header(default=None),
+):
+    _verify_webhook_secret(request, x_webhook_secret)
+    payload = await request.json()
+
+    if payload.get("event_type") != "reply_received":
+        return {"status": "ignored", "reason": f"event_type={payload.get('event_type')!r}"}
+
+    lead_email = payload.get("lead_email")
+    reply_text = payload.get("reply_text") or payload.get("reply_text_snippet") or ""
+    reply_subject = payload.get("reply_subject", "")
+    campaign_id = payload.get("campaign_id")
+
+    if not lead_email or not reply_text:
+        raise HTTPException(status_code=422, detail="Payload missing lead_email or reply_text.")
+
+    # Determine campaign type and check if it's registered
+    campaign_type = _get_campaign_type(campaign_id)
+    if campaign_type is None:
+        return {"status": "ignored", "reason": f"campaign_id={campaign_id!r} not in any registered campaign type"}
+
+    dedupe_key = _dedupe_key(payload, lead_email, reply_text)
+    conn = get_db()
+
+    existing = conn.execute(
+        "SELECT id FROM reply_automation_log WHERE dedupe_key = ?", (dedupe_key,)
+    ).fetchone()
+    if existing:
+        conn.close()
+        return {"status": "duplicate", "dedupe_key": dedupe_key}
+
+    # Route to the appropriate handler based on campaign type
+    handlers = {
+        "module1": handle_module1_campaign,
+        "schools": handle_schools_campaign,
+    }
+    handler = handlers.get(campaign_type)
+
+    if handler is None:
+        conn.close()
+        return {"status": "error", "reason": f"No handler for campaign type {campaign_type!r}"}
+
+    action, intent, age_group, language, country, currency, tag_applied, systeme_contact_id, error = (
+        await handler(payload, lead_email, reply_text, reply_subject, campaign_id, conn)
+    )
+
+    log_reply_to_supabase(
+        dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
         intent, age_group, language, country, currency, action, tag_applied,
         systeme_contact_id, error, json.dumps(payload),
     )
@@ -534,18 +614,7 @@ def automation_log(
     limit: int = 50,
     _key: str = Depends(require_api_key),
 ):
-    conn = get_db()
-    if action:
-        rows = conn.execute(
-            "SELECT * FROM reply_automation_log WHERE action = ? ORDER BY id DESC LIMIT ?",
-            (action, limit),
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT * FROM reply_automation_log ORDER BY id DESC LIMIT ?", (limit,)
-        ).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
+    return get_logs_from_supabase(action=action, limit=limit)
 
 
 @router.get(
@@ -554,68 +623,35 @@ def automation_log(
     summary="Aggregate counts for the reply-automation dashboard (requires X-API-Key)",
 )
 def automation_stats(_key: str = Depends(require_api_key)):
-    conn = get_db()
+    return get_stats_from_supabase()
 
-    totals = conn.execute("SELECT COUNT(*) AS n FROM reply_automation_log").fetchone()["n"]
 
-    by_action = {
-        r["action"]: r["n"]
-        for r in conn.execute(
-            "SELECT action, COUNT(*) AS n FROM reply_automation_log GROUP BY action"
-        ).fetchall()
+@router.get(
+    "/automation/debug/supabase",
+    tags=["Automation", "Gated"],
+    summary="TEMPORARY: check whether SUPABASE_DB_URL is set and reachable (requires X-API-Key)",
+)
+def debug_supabase(_key: str = Depends(require_api_key)):
+    if not SUPABASE_DB_URL:
+        return {"env_var_set": False, "detail": "SUPABASE_DB_URL is empty or not set in this process."}
+
+    result = {
+        "env_var_set": True,
+        "env_var_length": len(SUPABASE_DB_URL),
+        "env_var_prefix": SUPABASE_DB_URL[:20],
     }
-
-    by_age_group = {
-        r["age_group"]: r["n"]
-        for r in conn.execute(
-            """SELECT age_group, COUNT(*) AS n FROM reply_automation_log
-               WHERE action IN ('tagged_module1', 'tagged_module1_currency_pending')
-               GROUP BY age_group"""
-        ).fetchall()
-    }
-
-    by_currency = {
-        r["currency"]: r["n"]
-        for r in conn.execute(
-            """SELECT currency, COUNT(*) AS n FROM reply_automation_log
-               WHERE action = 'tagged_module1' GROUP BY currency"""
-        ).fetchall()
-    }
-
-    by_day = [
-        dict(r)
-        for r in conn.execute(
-            """SELECT date(received_at) AS day, COUNT(*) AS n
-               FROM reply_automation_log
-               GROUP BY day ORDER BY day DESC LIMIT 14"""
-        ).fetchall()
-    ]
-
-    by_language = {
-        (r["language"] or "unknown"): r["n"]
-        for r in conn.execute(
-            """SELECT language, COUNT(*) AS n FROM reply_automation_log
-               GROUP BY language ORDER BY n DESC"""
-        ).fetchall()
-    }
-
-    last_received_at = conn.execute(
-        "SELECT MAX(received_at) AS t FROM reply_automation_log"
-    ).fetchone()["t"]
-
-    conn.close()
-
-    return {
-        "total_replies": totals,
-        "by_action": by_action,
-        "module1_by_age_group": by_age_group,
-        "module1_by_currency": by_currency,
-        "by_language": by_language,
-        "by_day": by_day,
-        "last_received_at": last_received_at,
-        "errors": by_action.get("error", 0),
-        "needs_currency_review": by_action.get("tagged_module1_currency_pending", 0),
-    }
+    try:
+        conn = get_supabase_conn()
+        c = conn.cursor()
+        c.execute("SELECT to_regclass('public.reply_automation_log')")
+        table_exists = c.fetchone()[0] is not None
+        conn.close()
+        result["connected"] = True
+        result["table_exists"] = table_exists
+    except Exception as e:
+        result["connected"] = False
+        result["error"] = str(e)
+    return result
 
 
 @router.get(

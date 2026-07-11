@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 
 from auth import require_api_key
-from database import get_db, init_db, row_to_dict
+from database import get_db, init_db, init_supabase_log_table, row_to_dict
 from email_automation import router as email_automation_router
 from seed_data import seed
 
@@ -52,6 +52,7 @@ app.include_router(email_automation_router)
 def startup():
     init_db()
     seed()
+    init_supabase_log_table()
 
 
 # ---------------------------------------------------------------------------

@@ -302,6 +302,281 @@ The systeme.io request/response shapes in `email_automation.py` (`_create_contac
 
 ---
 
+## Campaign types & routing
+
+The automation system is designed to handle **multiple campaign types**, each with different intents and handlers. As you add new campaigns (e.g., school decision-makers, corporate contacts, etc.), this architecture lets you route each type to its own processing logic without mixing concerns.
+
+### Architecture overview
+
+**Campaign routing is based on campaign ID:**
+
+1. When Instantly sends a `reply_received` webhook, it includes the `campaign_id`
+2. The webhook checks which campaign type owns that `campaign_id` (via `INSTANTLY_MODULE1_CAMPAIGN_IDS`, `INSTANTLY_SCHOOLS_CAMPAIGN_IDS`, etc.)
+3. Routes the reply to the matching handler (e.g., `handle_module1_campaign()`)
+4. Each handler has its own classification logic, tag assignments, and systeme.io actions
+5. Everything is logged to the same audit table with campaign-type metadata
+
+**Why this design?**
+- Avoids hardcoding campaign-specific logic into a single monolithic webhook
+- Lets you add new campaign types without touching the webhook endpoint
+- Each type can have completely different intent classifications, tag schemes, and enrollment flows
+- Unregistered campaigns are safely ignored (not processed, not errored)
+
+### Current setup (as of July 2026)
+
+**Active campaign type: `module1`**
+
+24 campaigns asking teachers "which age group do you teach?" and offering free Module 1 in return:
+
+```
+US-27Aug-NY, US-29Jul-CA
+UK-18Aug-Unassigned, UK-18Aug-EnglandWales, UK-17Aug-NorthernIreland, UK-29Jul-Scotland
+SE-06Aug-Sweden, NO-05Aug-Norway, FI-29Jul-Finland, DK-27Jul-Denmark
+BE-18Aug-Flanders, BE-10Aug-Walloon, BE-10Aug-Brussels
+DE-24Jul-Hessen-RLP-Saarland, DE-30Jul-Bremen-Niedersachsen, DE-31Jul-Sachsen-SachsenAnhalt-Thuringen-SH, DE-06Aug-Hamburg, DE-10Aug-Berlin-Brandenburg-MV, DE-19Aug-NRW, DE-31Aug-BadenWurttemberg
+NL-03Aug-North, NL-10Aug-South, NL-17Aug-Central
+DE-01Sep-Bayern
+```
+
+Environment variable: `INSTANTLY_MODULE1_CAMPAIGN_IDS` in Render (comma-separated list)
+
+Handler: `handle_module1_campaign()` in `email_automation.py`
+
+**Stub campaign type: `schools`**
+
+Planned for end of August. Will target school decision-makers (different intent, different tags, different enrollment).
+
+Environment variable: `INSTANTLY_SCHOOLS_CAMPAIGN_IDS` (currently empty)
+
+Handler: `handle_schools_campaign()` (stub, no logic yet)
+
+### How to add a new campaign type
+
+**1. Create your campaigns in Instantly**
+
+Set up the campaigns with their own mailboxes, sequences, and audience. Note the campaign IDs.
+
+**2. Create a handler function in `email_automation.py`**
+
+```python
+async def handle_your_campaign_type(
+    payload: dict,
+    lead_email: str,
+    reply_text: str,
+    reply_subject: str,
+    campaign_id: str,
+    conn,
+) -> tuple[str, str | None, str | None, str | None, str | None, str | None, str | None, str | None, str | None]:
+    """Handler for your-campaign-type campaigns.
+
+    Returns: (action, intent, age_group, language, country, currency, tag_applied, systeme_contact_id, error)
+    
+    Notes:
+    - action: one of "tagged_...", "logged_...", "error" (what was done)
+    - intent: classification from Claude (your custom intents)
+    - language: ISO 639-1 code of reply language
+    - tag_applied: the systeme.io tag that was assigned (or None)
+    - systeme_contact_id: ID of the contact created/updated in systeme.io
+    - error: string if something went wrong, else None
+    """
+    # Your logic here
+    pass
+```
+
+**3. Add the campaign IDs to `render.yaml`**
+
+```yaml
+- key: INSTANTLY_YOUR_TYPE_CAMPAIGN_IDS
+  value: "campaign_id_1,campaign_id_2,campaign_id_3,..."
+```
+
+(Or set in Render's UI if you prefer not to commit.)
+
+**4. Register the handler in the webhook**
+
+In `instantly_reply_webhook()`, the handler routing dict already has a placeholder:
+
+```python
+handlers = {
+    "module1": handle_module1_campaign,
+    "schools": handle_schools_campaign,
+    # Add your new type here:
+    # "your_type": handle_your_campaign_type,
+}
+```
+
+Add your type when ready. Also update `_load_campaign_registries()` to load the env var:
+
+```python
+def _load_campaign_registries() -> dict[str, set[str]]:
+    registries = {}
+    module1_ids = os.getenv("INSTANTLY_MODULE1_CAMPAIGN_IDS", "").strip()
+    if module1_ids:
+        registries["module1"] = {id.strip() for id in module1_ids.split(",") if id.strip()}
+    
+    # Add your type:
+    your_type_ids = os.getenv("INSTANTLY_YOUR_TYPE_CAMPAIGN_IDS", "").strip()
+    if your_type_ids:
+        registries["your_type"] = {id.strip() for id in your_type_ids.split(",") if id.strip()}
+    
+    return registries
+```
+
+**5. Build systeme.io automation rules**
+
+For each tag your handler applies, create a systeme.io Automation Rule (tag added → actions). Same as module1 setup, but with your custom tags and workflows.
+
+**6. Test before going live**
+
+See "Testing webhooks" below.
+
+### Handler implementation details
+
+**What a handler receives:**
+- `payload`: The full Instantly webhook payload (raw, unprocessed)
+- `lead_email`: Extracted email address
+- `reply_text`, `reply_subject`: The reply content
+- `campaign_id`: Which campaign this came from
+- `conn`: SQLite connection (for any custom logging if needed)
+
+**What a handler returns:**
+A tuple of 9 values:
+1. `action` — string describing what was done: `"tagged_module1"`, `"tagged_september"`, `"logged_unclear"`, `"error"`, etc.
+2. `intent` — what Claude classified the reply as: `"age_group_provided"`, `"september_followup"`, `"not_interested"`, `"unclear"`, or your custom intents
+3. `age_group` — extracted age band (module1 uses `"6-9"`, `"10-12"`, `"13-16"`, `"17+"`, or None)
+4. `language` — ISO 639-1 code (e.g., `"en"`, `"de"`, `"fr"`)
+5. `country` — extracted country name if found, else None
+6. `currency` — derived from country (e.g., `"EUR"`, `"GBP"`, `"USD"`), else None
+7. `tag_applied` — the systeme.io tag that was assigned, else None
+8. `systeme_contact_id` — the contact ID from systeme.io after creation/update, else None
+9. `error` — error string if something failed, else None
+
+The webhook logs all of these to the database and returns them in the JSON response.
+
+**Example (module1):**
+```python
+async def handle_module1_campaign(...):
+    try:
+        classification = classify_reply(reply_text, reply_subject)
+        intent = classification.get("intent", "unclear")
+        age_group = classification.get("age_group")
+        language = classification.get("language")
+        
+        if intent == "age_group_provided" and age_group in MODULE1_AGE_TAGS:
+            age_tag = MODULE1_AGE_TAGS[age_group]
+            # ... systeme.io logic ...
+            systeme_contact_id, _ = upsert_contact_and_tags(lead_email, [age_tag], custom_fields)
+            return "tagged_module1", intent, age_group, language, country, currency, age_tag, systeme_contact_id, None
+        # ... other intents ...
+    except Exception as exc:
+        return "error", intent, age_group, language, country, currency, None, None, str(exc)
+```
+
+### Testing webhooks
+
+**Before going live with new campaigns:**
+
+1. **Set up the campaign IDs in Render** and redeploy
+2. **Send a test webhook** from your machine:
+
+```bash
+curl -X POST "https://sor-curriculum-api.onrender.com/webhooks/instantly-reply?secret=YOUR_WEBHOOK_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_type":"reply_received",
+    "campaign_id":"US-27Aug-NY",
+    "lead_email":"test@example.com",
+    "reply_subject":"Age question",
+    "reply_text":"I teach 5th grade"
+  }'
+```
+
+**Important:** Pass the webhook secret as a **query parameter** (`?secret=...`), not as a header. The code supports both, but query params are simpler and more reliable in testing.
+
+Expected response (module1 reply that provides age group):
+```json
+{
+  "status":"processed",
+  "action":"tagged_module1",
+  "intent":"age_group_provided",
+  "age_group":"10-12",
+  "language":"en",
+  "country":null,
+  "currency":null,
+  "tag_applied":"Module-1 Free (10-12yr)",
+  "error":null
+}
+```
+
+3. **Check the dashboard**: `https://sor-curriculum-api.onrender.com/dashboard?key=YOUR_SOR_MASTER_KEY`
+   - Should show 1 reply processed
+   - 1 Module 1 sent (age group 10-12)
+   - Activity log shows the reply with all metadata
+
+4. **Check the audit log**: `GET /automation/log?limit=1` (with `X-API-Key` header)
+   - Should have one row with action, intent, age_group, language, campaign_id
+   - `error` column should be empty if everything worked
+
+5. **Send a duplicate** (same email + campaign + reply text) — should get `"status":"duplicate"` in response, confirming dedupe works
+
+6. **Test a reply that doesn't match your handler's intents** (e.g., for module1, a reply that's not an age group)
+   - Should process successfully with action like `"logged_unclear"` or `"logged_not_interested"`
+   - Confirm the action in the dashboard
+
+### Logging & audit trail
+
+All replies (across all campaign types) are logged to `reply_automation_log` table:
+
+| Column | Notes |
+|---|---|
+| `id` | Auto-increment PK |
+| `received_at` | UTC timestamp when webhook arrived |
+| `dedupe_key` | Hash of (lead_email, campaign_id, reply_text) — prevents double-processing |
+| `lead_email` | Recipient's email |
+| `campaign_id` | Which Instantly campaign this came from |
+| `reply_subject` | Email subject line |
+| `reply_text` | The actual reply |
+| `intent` | Handler's classification |
+| `age_group` | Extracted age band (if any) |
+| `language` | ISO 639-1 language code |
+| `country` | Country extracted from webhook (if any) |
+| `currency` | Derived from country (if any) |
+| `action` | What the handler did: `tagged_*`, `logged_*`, `error` |
+| `tag_applied` | systeme.io tag assigned (if any) |
+| `systeme_contact_id` | Contact ID in systeme.io (if created/updated) |
+| `error` | Error message (if action is `error`) |
+| `raw_payload` | Full Instantly webhook JSON (for debugging) |
+
+Access via `GET /automation/log` (requires `X-API-Key`), filterable by `action` and `limit`.
+
+### Persistence & data retention
+
+- **Database**: Stored on Render's persistent disk (`/data/sor.db`). Service upgrades to **standard plan** (not free tier) to enable this.
+- **Render logs**: Keep Instantly webhook signature verification details in case needed for audit
+- **systeme.io records**: All contacts and tags are stored on systeme.io's servers, not in this database — this is just an audit log
+
+### Troubleshooting new campaign types
+
+**Webhook returns `"status":"ignored"`**
+- Campaign ID not registered. Check `INSTANTLY_MODULE1_CAMPAIGN_IDS` (or your type's env var) in Render — is the campaign ID there, spelled exactly right, no spaces?
+- Did you redeploy after changing the env var?
+
+**Handler returns `"action":"error"`**
+- Check the `error` field in the response (or dashboard) for details
+- Common: systeme.io API key not set, or contact creation failed (400/422 from systeme.io, body in error)
+- Check `/automation/log` for the full error message
+
+**Claude classification seems wrong**
+- Test a few more replies to spot patterns
+- If a specific language/region is consistently misclassified, add diagnostic replies and check their language code in the log
+- Claude Haiku is fast but sometimes needs more context — can prompt tweak `CLASSIFY_SYSTEM_PROMPT` if needed
+
+**systeme.io tag not applied**
+- Is the systeme.io Automation Rule actually built? Tags get applied, but rules might not exist yet
+- Tags don't auto-trigger actions; you need the rule in systeme.io
+
+---
+
 ## Approving API keys
 
 Access requests are logged to the `api_keys` table with `status = 'pending'`. To approve a key manually:

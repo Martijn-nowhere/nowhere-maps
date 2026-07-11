@@ -2,7 +2,7 @@ services:
   - type: web
     name: sor-curriculum-api
     runtime: python
-    plan: free
+    plan: standard
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -15,6 +15,12 @@ services:
       - key: SYSTEME_IO_API_KEY
         sync: false
       - key: INSTANTLY_WEBHOOK_SECRET
+        sync: false
+      - key: INSTANTLY_MODULE1_CAMPAIGN_IDS
+        value: "US-27Aug-NY,US-29Jul-CA,UK-18Aug-Unassigned,UK-18Aug-EnglandWales,UK-17Aug-NorthernIreland,UK-29Jul-Scotland,SE-06Aug-Sweden,NO-05Aug-Norway,FI-29Jul-Finland,DK-27Jul-Denmark,BE-18Aug-Flanders,BE-10Aug-Walloon,BE-10Aug-Brussels,DE-24Jul-Hessen-RLP-Saarland,DE-30Jul-Bremen-Niedersachsen,DE-31Jul-Sachsen-SachsenAnhalt-Thuringen-SH,DE-06Aug-Hamburg,DE-10Aug-Berlin-Brandenburg-MV,DE-19Aug-NRW,DE-31Aug-BadenWurttemberg,NL-03Aug-North,NL-10Aug-South,NL-17Aug-Central,DE-01Sep-Bayern"
+      - key: INSTANTLY_SCHOOLS_CAMPAIGN_IDS
+        sync: false
+      - key: SUPABASE_DB_URL
         sync: false
     disk:
       name: sor-data
