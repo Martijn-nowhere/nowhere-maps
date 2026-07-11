@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 
 from auth import is_valid_key, require_api_key
-from database import get_db
+from database import get_db, log_reply_to_supabase, get_logs_from_supabase, get_stats_from_supabase
 
 router = APIRouter()
 
@@ -535,24 +535,6 @@ def _dedupe_key(payload: dict, lead_email: str, reply_text: str) -> str:
     return "hash:" + hashlib.sha256(raw.encode()).hexdigest()
 
 
-def _log(conn, dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
-          intent, age_group, language, country, currency, action, tag_applied,
-          systeme_contact_id, error, raw_payload):
-    conn.execute(
-        """
-        INSERT OR IGNORE INTO reply_automation_log
-            (dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
-             intent, age_group, language, country, currency, action, tag_applied,
-             systeme_contact_id, error, raw_payload)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
-         intent, age_group, language, country, currency, action, tag_applied,
-         systeme_contact_id, error, raw_payload),
-    )
-    conn.commit()
-
-
 @router.post("/webhooks/instantly-reply", tags=["Automation"], summary="Instantly reply webhook")
 async def instantly_reply_webhook(
     request: Request,
@@ -602,8 +584,8 @@ async def instantly_reply_webhook(
         await handler(payload, lead_email, reply_text, reply_subject, campaign_id, conn)
     )
 
-    _log(
-        conn, dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
+    log_reply_to_supabase(
+        dedupe_key, lead_email, campaign_id, reply_subject, reply_text,
         intent, age_group, language, country, currency, action, tag_applied,
         systeme_contact_id, error, json.dumps(payload),
     )
@@ -632,18 +614,7 @@ def automation_log(
     limit: int = 50,
     _key: str = Depends(require_api_key),
 ):
-    conn = get_db()
-    if action:
-        rows = conn.execute(
-            "SELECT * FROM reply_automation_log WHERE action = ? ORDER BY id DESC LIMIT ?",
-            (action, limit),
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT * FROM reply_automation_log ORDER BY id DESC LIMIT ?", (limit,)
-        ).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
+    return get_logs_from_supabase(action=action, limit=limit)
 
 
 @router.get(
@@ -652,68 +623,7 @@ def automation_log(
     summary="Aggregate counts for the reply-automation dashboard (requires X-API-Key)",
 )
 def automation_stats(_key: str = Depends(require_api_key)):
-    conn = get_db()
-
-    totals = conn.execute("SELECT COUNT(*) AS n FROM reply_automation_log").fetchone()["n"]
-
-    by_action = {
-        r["action"]: r["n"]
-        for r in conn.execute(
-            "SELECT action, COUNT(*) AS n FROM reply_automation_log GROUP BY action"
-        ).fetchall()
-    }
-
-    by_age_group = {
-        r["age_group"]: r["n"]
-        for r in conn.execute(
-            """SELECT age_group, COUNT(*) AS n FROM reply_automation_log
-               WHERE action IN ('tagged_module1', 'tagged_module1_currency_pending')
-               GROUP BY age_group"""
-        ).fetchall()
-    }
-
-    by_currency = {
-        r["currency"]: r["n"]
-        for r in conn.execute(
-            """SELECT currency, COUNT(*) AS n FROM reply_automation_log
-               WHERE action = 'tagged_module1' GROUP BY currency"""
-        ).fetchall()
-    }
-
-    by_day = [
-        dict(r)
-        for r in conn.execute(
-            """SELECT date(received_at) AS day, COUNT(*) AS n
-               FROM reply_automation_log
-               GROUP BY day ORDER BY day DESC LIMIT 14"""
-        ).fetchall()
-    ]
-
-    by_language = {
-        (r["language"] or "unknown"): r["n"]
-        for r in conn.execute(
-            """SELECT language, COUNT(*) AS n FROM reply_automation_log
-               GROUP BY language ORDER BY n DESC"""
-        ).fetchall()
-    }
-
-    last_received_at = conn.execute(
-        "SELECT MAX(received_at) AS t FROM reply_automation_log"
-    ).fetchone()["t"]
-
-    conn.close()
-
-    return {
-        "total_replies": totals,
-        "by_action": by_action,
-        "module1_by_age_group": by_age_group,
-        "module1_by_currency": by_currency,
-        "by_language": by_language,
-        "by_day": by_day,
-        "last_received_at": last_received_at,
-        "errors": by_action.get("error", 0),
-        "needs_currency_review": by_action.get("tagged_module1_currency_pending", 0),
-    }
+    return get_stats_from_supabase()
 
 
 @router.get(
