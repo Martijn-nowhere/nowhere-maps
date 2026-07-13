@@ -147,6 +147,11 @@ class AccessRequest(BaseModel):
 # Public endpoints
 # ---------------------------------------------------------------------------
 
+@app.api_route("/healthz", methods=["GET", "HEAD"], include_in_schema=False)
+def healthz():
+    return {"status": "ok"}
+
+
 @app.get("/about", tags=["Public"], summary="Machine-readable SoR organisation profile")
 def about():
     return {
