@@ -4,11 +4,11 @@
 
 School of Recycling automated email-reply-to-course enrollment system. Instantly cold-email campaigns → Claude classifies reply → systeme.io tag applied → contact auto-enrolled in free Module 1 + nurture sequence.
 
-**Status**: Production-ready. 24 teacher/age-group campaigns active, ready to send. US school-district curriculum-decision-maker campaigns (2 tracks) built and ready for late-August send; warm-reply routing code is done, systeme.io automation rules for the two district tags still need to be built no-code before go-live.
+**Status**: Production-ready. 28 teacher/age-group campaigns active, ready to send. US school-district curriculum-decision-maker campaigns (2 tracks) built and ready for late-August send; warm-reply routing code is done, systeme.io automation rules for the two district tags still need to be built no-code before go-live.
 
 ## Current setup
 
-**Campaigns (active)**: 24 Module 1 campaigns across 2x US, 4x UK, 1x SE, 1x NO, 1x FI, 1x DK, 3x BE, 8x DE, 3x NL = ~40 mailboxes, ~13k sends planned.
+**Campaigns (active)**: 28 Module 1 campaigns across 2x US, 4x UK, 1x SE, 1x NO, 1x FI, 1x DK, 3x BE, 8x DE, 3x NL, 1x Saudi Arabia, 1x Oman, 1x Qatar, 1x UAE = ~40+ mailboxes, ~13k+ sends planned. Middle East campaigns added after initial send-out (`Saudi-09Aug`, `Oman-13Aug`, `Qatar-16Aug`, `UAE-17Aug`) — note these 4 countries aren't in `EU_COUNTRIES`/`UK_NAMES` so `currency_for_country()` falls back to USD for them (no SAR/OMR/QAR/AED checkout pages exist — only EUR/GBP/USD are supported currencies).
 
 **Campaigns (built, not yet sent)**: 2 US school-district tracks — `US-24Aug-CurriculumDirectors` (Track A, generalist curriculum titles) and `US-25Aug-ScienceSTEMDirectors` (Track B, science/STEM/CTE titles), 4 emails each, targeting 246 districts / ~516 contacts purchased from MCH Strategic Data. Not asking for age group like module1 — asks for a reply to schedule a call; warm replies get tagged in systeme.io to trigger a calendar-booking follow-up sequence instead of a Module 1 enrollment. See "Reply-to-Course Automation" recap for full campaign copy/timing/list details.
 

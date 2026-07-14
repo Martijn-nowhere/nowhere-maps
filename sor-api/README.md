@@ -326,7 +326,7 @@ The automation system is designed to handle **multiple campaign types**, each wi
 
 **Active campaign type: `module1`**
 
-24 campaigns asking teachers "which age group do you teach?" and offering free Module 1 in return:
+28 campaigns asking teachers "which age group do you teach?" and offering free Module 1 in return:
 
 ```
 US-27Aug-NY, US-29Jul-CA
@@ -336,7 +336,10 @@ BE-18Aug-Flanders, BE-10Aug-Walloon, BE-10Aug-Brussels
 DE-24Jul-Hessen-RLP-Saarland, DE-30Jul-Bremen-Niedersachsen, DE-31Jul-Sachsen-SachsenAnhalt-Thuringen-SH, DE-06Aug-Hamburg, DE-10Aug-Berlin-Brandenburg-MV, DE-19Aug-NRW, DE-31Aug-BadenWurttemberg
 NL-03Aug-North, NL-10Aug-South, NL-17Aug-Central
 DE-01Sep-Bayern
+Saudi-09Aug, Oman-13Aug, Qatar-16Aug, UAE-17Aug
 ```
+
+The 4 Middle East campaigns (Saudi Arabia, Oman, Qatar, UAE) were added after the initial 24. None of those countries are in `EU_COUNTRIES` or `UK_NAMES` in `email_automation.py`, so `currency_for_country()` falls back to USD for replies from them — intentional, since only EUR/GBP/USD checkout pages exist (`CHECKOUT_LINKS_CLASS`/`CHECKOUT_LINKS_SCHOOL`), not local-currency ones for SAR/OMR/QAR/AED.
 
 Environment variable: `INSTANTLY_MODULE1_CAMPAIGN_IDS` in Render (comma-separated list)
 
