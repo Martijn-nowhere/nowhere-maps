@@ -4,22 +4,25 @@
 
 School of Recycling automated email-reply-to-course enrollment system. Instantly cold-email campaigns → Claude classifies reply → systeme.io tag applied → contact auto-enrolled in free Module 1 + nurture sequence.
 
-**Status**: Production-ready. 24 teacher/age-group campaigns active, ready to send. Schools/decision-maker campaigns planned end of August.
+**Status**: Production-ready. 24 teacher/age-group campaigns active, ready to send. US school-district curriculum-decision-maker campaigns (2 tracks) built and ready for late-August send; warm-reply routing code is done, systeme.io automation rules for the two district tags still need to be built no-code before go-live.
 
 ## Current setup
 
 **Campaigns (active)**: 24 Module 1 campaigns across 2x US, 4x UK, 1x SE, 1x NO, 1x FI, 1x DK, 3x BE, 8x DE, 3x NL = ~40 mailboxes, ~13k sends planned.
+
+**Campaigns (built, not yet sent)**: 2 US school-district tracks — `US-24Aug-CurriculumDirectors` (Track A, generalist curriculum titles) and `US-25Aug-ScienceSTEMDirectors` (Track B, science/STEM/CTE titles), 4 emails each, targeting 246 districts / ~516 contacts purchased from MCH Strategic Data. Not asking for age group like module1 — asks for a reply to schedule a call; warm replies get tagged in systeme.io to trigger a calendar-booking follow-up sequence instead of a Module 1 enrollment. See "Reply-to-Course Automation" recap for full campaign copy/timing/list details.
 
 **Configuration**:
 - Render deployment: `sor-curriculum-api` (standard plan for persistent disk)
 - Database: SQLite `/data/sor.db` on persistent 1GB disk
 - API keys: `SOR_MASTER_KEY` auto-generated on first deploy
 - Webhook secret: `INSTANTLY_WEBHOOK_SECRET` (set in Render environment, use query param `?secret=...` for testing)
-- Environment vars: See `sor-api/render.yaml` (ANTHROPIC_API_KEY, SYSTEME_IO_API_KEY, INSTANTLY_WEBHOOK_SECRET, INSTANTLY_MODULE1_CAMPAIGN_IDS, INSTANTLY_SCHOOLS_CAMPAIGN_IDS)
+- Environment vars: See `sor-api/render.yaml` (ANTHROPIC_API_KEY, SYSTEME_IO_API_KEY, INSTANTLY_WEBHOOK_SECRET, INSTANTLY_MODULE1_CAMPAIGN_IDS, INSTANTLY_SCHOOLS_CAMPAIGN_IDS, INSTANTLY_US_DISTRICTS_CURRICULUM_CAMPAIGN_IDS, INSTANTLY_US_DISTRICTS_SCIENCE_CAMPAIGN_IDS)
 
 **Campaign routing**: 
 - Type-based architecture (`campaign_id` → `campaign_type` → handler)
 - 24 IDs registered under `module1` type in `INSTANTLY_MODULE1_CAMPAIGN_IDS`
+- 1 ID each registered under `us_districts_curriculum` / `us_districts_science` types — sentiment-based classifier (`interested` / `referral` / `not_interested` / `unclear`), only `interested` gets tagged (`us-district-curriculum-reply` / `us-district-science-reply`)
 - Unregistered campaigns safely ignored
 - See README "Campaign types & routing" section for full architecture & extension guide
 
@@ -51,15 +54,26 @@ School of Recycling automated email-reply-to-course enrollment system. Instantly
 
 6. **Documentation completed** — README "Campaign types & routing" section covers architecture, adding new types, testing, troubleshooting
 
+7. **US school-district warm-reply routing built** — `us_districts_curriculum` / `us_districts_science` campaign types added: `classify_district_reply()` (new sentiment classifier — `interested`/`referral`/`not_interested`/`unclear`, separate from module1's age-group classifier), `handle_us_district_curriculum_campaign()` / `handle_us_district_science_campaign()` (thin wrappers around shared `_handle_us_district_reply()`), 2 campaign IDs registered in `render.yaml`, dashboard got a "US district campaigns" card row, README documents the new type per the existing extension-guide pattern
+
 ## Next steps
 
-### Immediate (before campaigns send)
+### Immediate (before module1 campaigns send)
 - Verify Instantly webhook is pointing to `https://sor-curriculum-api.onrender.com/webhooks/instantly-reply?secret=YOUR_SECRET`
 - Confirm all 4 systeme.io age-specific automation rules are built (tag added → enroll in Module 1 + subscribe nurture)
 - Confirm `Sept26-FollowUp` automation rule exists (for September follow-up tag)
 - Test one real reply before campaigns go live (check dashboard + `/automation/log`)
 
-### End of August (school decision-maker campaigns)
+### Before US district campaigns send (late August)
+- **Not yet done**: Debounce verification run on the purchased 516-contact list
+- **Not yet done**: Campaign B (Science/STEM track) email copy — only Campaign A's 4 emails are fully drafted; Track B needs the same structure with sharper NGSS/standards framing in Email 2
+- **Not yet done**: final merge-field population once list is verified (real district names/enrollment, not placeholders)
+- **Not yet done**: build the 2 systeme.io Automation Rules (tag added → enrol in calendar-booking follow-up sequence) for `us-district-curriculum-reply` and `us-district-science-reply` — code side is done, this is the remaining no-code step
+- Test one real/sample reply per track before go-live (see README "US school-district curriculum decision-maker outreach" section)
+- Set up the two Instantly campaigns (mailboxes, sequences, webhook), confirm campaign IDs match `US-24Aug-CurriculumDirectors` / `US-25Aug-ScienceSTEMDirectors` in `render.yaml`
+- Enable Instantly's "stop sending on reply" + AI Smart Pause for OOO auto-replies; consider "stop emails to whole company on any reply"
+
+### End of August (school decision-maker campaigns — separate `schools` stub, still unimplemented)
 1. Create school campaigns in Instantly, get campaign IDs
 2. Add IDs to `INSTANTLY_SCHOOLS_CAMPAIGN_IDS` in Render (or env var)
 3. Implement `handle_schools_campaign()` in `email_automation.py` (classify for decision-maker intent, apply different tag scheme, different enrollment)

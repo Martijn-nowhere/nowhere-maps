@@ -350,6 +350,34 @@ Environment variable: `INSTANTLY_SCHOOLS_CAMPAIGN_IDS` (currently empty)
 
 Handler: `handle_schools_campaign()` (stub, no logic yet)
 
+**Active campaign types: `us_districts_curriculum` / `us_districts_science`**
+
+US school-district curriculum decision-maker outreach (see project recap for full campaign details — 246
+districts, purchased from MCH Strategic Data, 2 tracks split by job-title relevance). Unlike `module1`, this
+isn't asking for an age group — it's a 4-email no-link cold sequence asking for a reply to schedule a call, and
+the warm-reply flow just tags interested replies so a systeme.io automation can send a calendar booking link
+(Google Workspace's native "Appointment schedule" feature, connected directly in systeme.io — no Calendly).
+
+| Track | Campaign ID | Env var | Tag applied on "interested" |
+|---|---|---|---|
+| A — generalist curriculum titles | `US-24Aug-CurriculumDirectors` | `INSTANTLY_US_DISTRICTS_CURRICULUM_CAMPAIGN_IDS` | `us-district-curriculum-reply` |
+| B — science/STEM/CTE titles | `US-25Aug-ScienceSTEMDirectors` | `INSTANTLY_US_DISTRICTS_SCIENCE_CAMPAIGN_IDS` | `us-district-science-reply` |
+
+Handlers: `handle_us_district_curriculum_campaign()` / `handle_us_district_science_campaign()` — both thin
+wrappers around shared logic in `_handle_us_district_reply()` (identical flow, different tag).
+
+Classification (`classify_district_reply()`, separate from the module1 age-group classifier) uses a custom
+sentiment intent set instead of age groups: `interested`, `referral`, `not_interested`, `unclear`. Only
+`interested` replies get tagged/enrolled — `referral` and `not_interested` are logged only (action
+`logged_district_referral` / `logged_district_not_interested`), since a referral's contact details live in the
+free-text reply, not a webhook field, and need a human to act on them manually. `logged_district_unclear`
+covers out-of-office auto-replies and anything the classifier can't confidently place.
+
+**Before this goes live**, in systeme.io build one Automation Rule per tag (`us-district-curriculum-reply` and
+`us-district-science-reply`), trigger = "Tag added", action = enrol in the follow-up sequence containing the
+Google Calendar booking link (+ 1-2 nudge follow-ups if they don't book) — same no-code pattern as the module1
+age tags, see "Build the systeme.io automation rules" above.
+
 ### How to add a new campaign type
 
 **1. Create your campaigns in Instantly**
