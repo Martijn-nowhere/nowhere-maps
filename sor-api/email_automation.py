@@ -52,6 +52,17 @@ EU_COUNTRIES = {
 }
 UK_NAMES = {"united kingdom", "uk", "great britain", "england", "scotland", "wales", "northern ireland"}
 
+# Gulf campaign countries (Saudi-09Aug, Oman-13Aug, Qatar-16Aug, UAE-17Aug) --
+# already covered by the USD fallback below, but listed explicitly (with
+# common name variants) so the mapping is documented rather than implicit,
+# and stays USD even if the fallback default ever changes.
+USD_COUNTRIES = {
+    "saudi arabia", "ksa", "kingdom of saudi arabia",
+    "oman", "sultanate of oman",
+    "qatar", "state of qatar",
+    "united arab emirates", "uae", "u.a.e.", "emirates",
+}
+
 
 def currency_for_country(country: str) -> str:
     normalized = country.strip().lower()
@@ -59,7 +70,7 @@ def currency_for_country(country: str) -> str:
         return "GBP"
     if normalized in EU_COUNTRIES:
         return "EUR"
-    return "USD"
+    return "USD"  # includes USD_COUNTRIES (Gulf campaigns) and everything else
 
 
 # Candidate keys to look for the lead's country under in the Instantly
