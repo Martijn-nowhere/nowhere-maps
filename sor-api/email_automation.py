@@ -52,6 +52,17 @@ EU_COUNTRIES = {
 }
 UK_NAMES = {"united kingdom", "uk", "great britain", "england", "scotland", "wales", "northern ireland"}
 
+# Gulf campaign countries (Saudi-09Aug, Oman-13Aug, Qatar-16Aug, UAE-17Aug) --
+# already covered by the USD fallback below, but listed explicitly (with
+# common name variants) so the mapping is documented rather than implicit,
+# and stays USD even if the fallback default ever changes.
+USD_COUNTRIES = {
+    "saudi arabia", "ksa", "kingdom of saudi arabia",
+    "oman", "sultanate of oman",
+    "qatar", "state of qatar",
+    "united arab emirates", "uae", "u.a.e.", "emirates",
+}
+
 
 def currency_for_country(country: str) -> str:
     normalized = country.strip().lower()
@@ -59,7 +70,7 @@ def currency_for_country(country: str) -> str:
         return "GBP"
     if normalized in EU_COUNTRIES:
         return "EUR"
-    return "USD"
+    return "USD"  # includes USD_COUNTRIES (Gulf campaigns) and everything else
 
 
 # Candidate keys to look for the lead's country under in the Instantly
@@ -126,6 +137,14 @@ def _load_campaign_registries() -> dict[str, set[str]]:
     schools_ids = os.getenv("INSTANTLY_SCHOOLS_CAMPAIGN_IDS", "").strip()
     if schools_ids:
         registries["schools"] = {id.strip() for id in schools_ids.split(",") if id.strip()}
+
+    curriculum_ids = os.getenv("INSTANTLY_US_DISTRICTS_CURRICULUM_CAMPAIGN_IDS", "").strip()
+    if curriculum_ids:
+        registries["us_districts_curriculum"] = {id.strip() for id in curriculum_ids.split(",") if id.strip()}
+
+    science_ids = os.getenv("INSTANTLY_US_DISTRICTS_SCIENCE_CAMPAIGN_IDS", "").strip()
+    if science_ids:
+        registries["us_districts_science"] = {id.strip() for id in science_ids.split(",") if id.strip()}
 
     return registries
 
@@ -516,6 +535,163 @@ async def handle_schools_campaign(
 
 
 # ---------------------------------------------------------------------------
+# US school district campaigns (curriculum-decision-maker outreach)
+#
+# Two tracks by title relevance, same warm-reply flow, different tag:
+# Track A (US-24Aug-CurriculumDirectors) -> generalist curriculum-decision-maker
+# titles. Track B (US-25Aug-ScienceSTEMDirectors) -> subject-specific titles
+# (science/STEM/CTE directors). No age group or country/currency routing here
+# -- unlike module1, the tag just enrols the contact in a systeme.io follow-up
+# sequence containing a calendar booking link (built no-code in systeme.io).
+# ---------------------------------------------------------------------------
+
+DISTRICT_REPLY_TAGS = {
+    "curriculum": "us-district-curriculum-reply",
+    "science": "us-district-science-reply",
+}
+
+CLASSIFY_DISTRICT_SYSTEM_PROMPT = """You classify replies to a School of Recycling cold email campaign sent to
+US school district curriculum decision-makers (curriculum directors, STEM/science directors, assistant
+superintendents, chief academic officers, etc.), offering a supplemental K-12 waste/plastics/circular-economy
+licence for their district.
+
+The campaign's 4-email sequence never includes a link -- it asks the recipient to reply to schedule a call.
+The last email in the sequence asks a low-pressure closing question: "should I stop reaching out, or is there
+someone else who owns this?"
+
+Read the reply and call classify_district_reply with:
+- intent: "interested" if they express any interest in learning more, want to schedule a call, ask a
+  substantive question about the offer, or otherwise want the conversation to continue.
+- intent: "referral" if they redirect to a different person or department as the right contact for this,
+  without themselves expressing interest or disinterest (e.g. "this isn't my area, try Jane Doe in curriculum").
+- intent: "not_interested" if they decline, ask to be removed/unsubscribed, or are clearly negative.
+- intent: "unclear" for anything else -- out-of-office auto-replies, blank/garbled replies, or replies you
+  can't confidently place in the above categories.
+
+Always also set language to the ISO 639-1 code of the language the reply itself is written in (almost always
+"en" for this campaign, but check)."""
+
+CLASSIFY_DISTRICT_TOOL = {
+    "name": "classify_district_reply",
+    "description": "Record the classification of a reply to the US school district cold-email campaign.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "intent": {
+                "type": "string",
+                "enum": ["interested", "referral", "not_interested", "unclear"],
+            },
+            "language": {
+                "type": "string",
+                "description": "ISO 639-1 code of the language the reply is written in, e.g. 'en'.",
+            },
+        },
+        "required": ["intent", "language"],
+    },
+}
+
+
+def classify_district_reply(reply_text: str, reply_subject: str = "") -> dict:
+    if _anthropic_client is None:
+        raise RuntimeError("ANTHROPIC_API_KEY is not configured.")
+
+    message = _anthropic_client.messages.create(
+        model=CLASSIFIER_MODEL,
+        max_tokens=200,
+        system=CLASSIFY_DISTRICT_SYSTEM_PROMPT,
+        tools=[CLASSIFY_DISTRICT_TOOL],
+        tool_choice={"type": "tool", "name": "classify_district_reply"},
+        messages=[
+            {
+                "role": "user",
+                "content": f"Subject: {reply_subject}\n\nReply:\n{reply_text}",
+            }
+        ],
+    )
+
+    for block in message.content:
+        if block.type == "tool_use" and block.name == "classify_district_reply":
+            return dict(block.input)
+
+    return {"intent": "unclear", "language": None}
+
+
+async def _handle_us_district_reply(
+    tag_name: str,
+    payload: dict,
+    lead_email: str,
+    reply_text: str,
+    reply_subject: str,
+    campaign_id: str,
+    conn,
+) -> tuple[str, str | None, str | None, str | None, str | None, str | None, str | None, str | None, str | None]:
+    """Shared logic for both US district tracks -- only the tag applied differs.
+
+    Only "interested" replies get tagged (which fires the systeme.io automation
+    that sends the calendar booking link). "referral" and "not_interested" are
+    logged for manual follow-up/exclusion rather than auto-tagged, since a
+    referral's contact details live in the reply text, not a webhook field.
+
+    Returns: (action, intent, age_group, language, country, currency, tag_applied, systeme_contact_id, error)
+    """
+    intent = "unclear"
+    language = None
+    action = "none"
+    tag_applied = None
+    systeme_contact_id = None
+    error = None
+
+    try:
+        classification = classify_district_reply(reply_text, reply_subject)
+        intent = classification.get("intent", "unclear")
+        language = classification.get("language")
+
+        if intent == "interested":
+            systeme_contact_id, _ = upsert_contact_and_tags(lead_email, [tag_name])
+            tag_applied = tag_name
+            action = "tagged_district_interested"
+        elif intent == "referral":
+            action = "logged_district_referral"
+        elif intent == "not_interested":
+            action = "logged_district_not_interested"
+        else:
+            action = "logged_district_unclear"
+    except (SystemeIOError, httpx.HTTPError, RuntimeError) as exc:
+        error = str(exc)
+        action = "error"
+
+    return action, intent, None, language, None, None, tag_applied, systeme_contact_id, error
+
+
+async def handle_us_district_curriculum_campaign(
+    payload: dict,
+    lead_email: str,
+    reply_text: str,
+    reply_subject: str,
+    campaign_id: str,
+    conn,
+) -> tuple[str, str | None, str | None, str | None, str | None, str | None, str | None, str | None, str | None]:
+    """Handler for Track A (US-24Aug-CurriculumDirectors) -- generalist curriculum-decision-maker titles."""
+    return await _handle_us_district_reply(
+        DISTRICT_REPLY_TAGS["curriculum"], payload, lead_email, reply_text, reply_subject, campaign_id, conn,
+    )
+
+
+async def handle_us_district_science_campaign(
+    payload: dict,
+    lead_email: str,
+    reply_text: str,
+    reply_subject: str,
+    campaign_id: str,
+    conn,
+) -> tuple[str, str | None, str | None, str | None, str | None, str | None, str | None, str | None, str | None]:
+    """Handler for Track B (US-25Aug-ScienceSTEMDirectors) -- subject-specific (science/STEM/CTE) titles."""
+    return await _handle_us_district_reply(
+        DISTRICT_REPLY_TAGS["science"], payload, lead_email, reply_text, reply_subject, campaign_id, conn,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Webhook
 # ---------------------------------------------------------------------------
 
@@ -573,6 +749,8 @@ async def instantly_reply_webhook(
     handlers = {
         "module1": handle_module1_campaign,
         "schools": handle_schools_campaign,
+        "us_districts_curriculum": handle_us_district_curriculum_campaign,
+        "us_districts_science": handle_us_district_science_campaign,
     }
     handler = handlers.get(campaign_type)
 
@@ -748,6 +926,17 @@ _DASHBOARD_HTML = """<!doctype html>
   <div class="section-title">Replies by language</div>
   <div class="cards" id="lang-cards"></div>
 
+  <div class="section-title">US district campaigns (curriculum + science tracks)</div>
+  <div class="cards" id="district-cards"></div>
+
+  <div class="section-title">US district campaigns — by track</div>
+  <div class="wrap">
+    <table>
+      <thead><tr><th>Campaign</th><th>Interested</th><th>Referral</th><th>Not interested</th><th>Needs review</th></tr></thead>
+      <tbody id="district-table-body"></tbody>
+    </table>
+  </div>
+
   <div class="section-title">Recent activity</div>
   <div class="wrap">
     <table>
@@ -816,6 +1005,29 @@ async function load() {
         `<div class="card"><div class="n">${esc(n)}</div><div class="l">${esc(lang)}</div></div>`
       ).join("")
     : `<div class="card"><div class="n">–</div><div class="l">no data yet</div></div>`;
+
+  const districtCards = [
+    ["Interested (tagged)", stats.by_action.tagged_district_interested || 0, ""],
+    ["Referral", stats.by_action.logged_district_referral || 0, ""],
+    ["Not interested", stats.by_action.logged_district_not_interested || 0, ""],
+    ["Needs review", stats.by_action.logged_district_unclear || 0, ""],
+  ];
+  document.getElementById("district-cards").innerHTML = districtCards.map(([l, n, cls]) =>
+    `<div class="card ${cls}"><div class="n">${esc(n)}</div><div class="l">${esc(l)}</div></div>`
+  ).join("");
+
+  const districtByCampaign = Object.entries(stats.district_by_campaign || {});
+  document.getElementById("district-table-body").innerHTML = districtByCampaign.length
+    ? districtByCampaign.map(([campaignId, counts]) => `
+        <tr>
+          <td>${esc(campaignId)}</td>
+          <td>${esc(counts.tagged_district_interested || 0)}</td>
+          <td>${esc(counts.logged_district_referral || 0)}</td>
+          <td>${esc(counts.logged_district_not_interested || 0)}</td>
+          <td>${esc(counts.logged_district_unclear || 0)}</td>
+        </tr>
+      `).join("")
+    : `<tr><td colspan="5">No district replies yet</td></tr>`;
 
   document.getElementById("log-body").innerHTML = log.map(r => `
     <tr class="${r.error ? 'error' : ''}">

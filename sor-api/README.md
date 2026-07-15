@@ -326,7 +326,7 @@ The automation system is designed to handle **multiple campaign types**, each wi
 
 **Active campaign type: `module1`**
 
-24 campaigns asking teachers "which age group do you teach?" and offering free Module 1 in return:
+28 campaigns asking teachers "which age group do you teach?" and offering free Module 1 in return:
 
 ```
 US-27Aug-NY, US-29Jul-CA
@@ -336,7 +336,10 @@ BE-18Aug-Flanders, BE-10Aug-Walloon, BE-10Aug-Brussels
 DE-24Jul-Hessen-RLP-Saarland, DE-30Jul-Bremen-Niedersachsen, DE-31Jul-Sachsen-SachsenAnhalt-Thuringen-SH, DE-06Aug-Hamburg, DE-10Aug-Berlin-Brandenburg-MV, DE-19Aug-NRW, DE-31Aug-BadenWurttemberg
 NL-03Aug-North, NL-10Aug-South, NL-17Aug-Central
 DE-01Sep-Bayern
+Saudi-09Aug, Oman-13Aug, Qatar-16Aug, UAE-17Aug
 ```
+
+The 4 Middle East campaigns (Saudi Arabia, Oman, Qatar, UAE) were added after the initial 24. None of those countries are in `EU_COUNTRIES` or `UK_NAMES` in `email_automation.py`, so `currency_for_country()` falls back to USD for replies from them — intentional, since only EUR/GBP/USD checkout pages exist (`CHECKOUT_LINKS_CLASS`/`CHECKOUT_LINKS_SCHOOL`), not local-currency ones for SAR/OMR/QAR/AED.
 
 Environment variable: `INSTANTLY_MODULE1_CAMPAIGN_IDS` in Render (comma-separated list)
 
@@ -349,6 +352,51 @@ Planned for end of August. Will target school decision-makers (different intent,
 Environment variable: `INSTANTLY_SCHOOLS_CAMPAIGN_IDS` (currently empty)
 
 Handler: `handle_schools_campaign()` (stub, no logic yet)
+
+**Active campaign types: `us_districts_curriculum` / `us_districts_science`**
+
+US school-district curriculum decision-maker outreach (see project recap for full campaign details — 246
+districts, purchased from MCH Strategic Data, 2 tracks split by job-title relevance). Unlike `module1`, this
+isn't asking for an age group — it's a 4-email no-link cold sequence asking for a reply to schedule a call, and
+the warm-reply flow just tags interested replies so a systeme.io automation can send a calendar booking link.
+
+Booking uses systeme.io's own native booking-calendar feature (not a bare Google Calendar "Appointment
+schedule" link as originally sketched) — a "District Intro Call" event (20 min, Google Meet, individual
+booking) embedded on a page at `schoolofrecycling.com/us-districts-call-booking`, with a 3-question form
+(district name, role, optional context) beyond the default name/email/phone fields.
+
+| Track | Campaign ID | Env var | Tag applied on "interested" |
+|---|---|---|---|
+| A — generalist curriculum titles | `US-24Aug-CurriculumDirectors` | `INSTANTLY_US_DISTRICTS_CURRICULUM_CAMPAIGN_IDS` | `us-district-curriculum-reply` |
+| B — science/STEM/CTE titles | `US-25Aug-ScienceSTEMDirectors` | `INSTANTLY_US_DISTRICTS_SCIENCE_CAMPAIGN_IDS` | `us-district-science-reply` |
+
+Handlers: `handle_us_district_curriculum_campaign()` / `handle_us_district_science_campaign()` — both thin
+wrappers around shared logic in `_handle_us_district_reply()` (identical flow, different tag).
+
+Classification (`classify_district_reply()`, separate from the module1 age-group classifier) uses a custom
+sentiment intent set instead of age groups: `interested`, `referral`, `not_interested`, `unclear`. Only
+`interested` replies get tagged/enrolled — `referral` and `not_interested` are logged only (action
+`logged_district_referral` / `logged_district_not_interested`), since a referral's contact details live in the
+free-text reply, not a webhook field, and need a human to act on them manually. `logged_district_unclear`
+covers out-of-office auto-replies and anything the classifier can't confidently place.
+
+**systeme.io side (built, no-code)**: a single Automation Rule with two "Tag added" triggers
+(`us-district-curriculum-reply` OR `us-district-science-reply` — multi-trigger rules are OR logic, confirmed
+in this project's existing module1 rules too, see "Architecture decisions" in the project's `CLAUDE.md`) →
+one action, "Subscribe to campaign" → the shared "US District Warm Reply Follow-up" campaign (2 emails: booking
+link, then a 3-day nudge if they haven't booked). Both tags are pre-created (not left to auto-create on first
+reply) so they're available in the rule's trigger dropdown.
+
+**Known gap**: systeme.io has no native "booked a meeting" workflow trigger as of writing (open request on
+their product roadmap, not shipped) — so the 3-day nudge email can't be auto-suppressed once someone's actually
+booked a call. Workaround until that ships: periodically check the booking calendar's Bookings tab and manually
+remove anyone who's already booked from the follow-up campaign. Given campaign volume (interested replies out
+of 516 contacts), this is a small, occasional manual check, not a blocker.
+
+**Remaining before go-live**: test one real/sample reply per track through the now-complete live pipeline
+(webhook → classify → tag → automation rule → follow-up email), Debounce-verify the purchased list, finish
+Campaign B's email copy, and populate real merge fields — see the project's `CLAUDE.md` "Next steps" for the
+current punch list.
 
 ### How to add a new campaign type
 
