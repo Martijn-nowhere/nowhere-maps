@@ -358,8 +358,12 @@ Handler: `handle_schools_campaign()` (stub, no logic yet)
 US school-district curriculum decision-maker outreach (see project recap for full campaign details — 246
 districts, purchased from MCH Strategic Data, 2 tracks split by job-title relevance). Unlike `module1`, this
 isn't asking for an age group — it's a 4-email no-link cold sequence asking for a reply to schedule a call, and
-the warm-reply flow just tags interested replies so a systeme.io automation can send a calendar booking link
-(Google Workspace's native "Appointment schedule" feature, connected directly in systeme.io — no Calendly).
+the warm-reply flow just tags interested replies so a systeme.io automation can send a calendar booking link.
+
+Booking uses systeme.io's own native booking-calendar feature (not a bare Google Calendar "Appointment
+schedule" link as originally sketched) — a "District Intro Call" event (20 min, Google Meet, individual
+booking) embedded on a page at `schoolofrecycling.com/us-districts-call-booking`, with a 3-question form
+(district name, role, optional context) beyond the default name/email/phone fields.
 
 | Track | Campaign ID | Env var | Tag applied on "interested" |
 |---|---|---|---|
@@ -376,10 +380,23 @@ sentiment intent set instead of age groups: `interested`, `referral`, `not_inter
 free-text reply, not a webhook field, and need a human to act on them manually. `logged_district_unclear`
 covers out-of-office auto-replies and anything the classifier can't confidently place.
 
-**Before this goes live**, in systeme.io build one Automation Rule per tag (`us-district-curriculum-reply` and
-`us-district-science-reply`), trigger = "Tag added", action = enrol in the follow-up sequence containing the
-Google Calendar booking link (+ 1-2 nudge follow-ups if they don't book) — same no-code pattern as the module1
-age tags, see "Build the systeme.io automation rules" above.
+**systeme.io side (built, no-code)**: a single Automation Rule with two "Tag added" triggers
+(`us-district-curriculum-reply` OR `us-district-science-reply` — multi-trigger rules are OR logic, confirmed
+in this project's existing module1 rules too, see "Architecture decisions" in the project's `CLAUDE.md`) →
+one action, "Subscribe to campaign" → the shared "US District Warm Reply Follow-up" campaign (2 emails: booking
+link, then a 3-day nudge if they haven't booked). Both tags are pre-created (not left to auto-create on first
+reply) so they're available in the rule's trigger dropdown.
+
+**Known gap**: systeme.io has no native "booked a meeting" workflow trigger as of writing (open request on
+their product roadmap, not shipped) — so the 3-day nudge email can't be auto-suppressed once someone's actually
+booked a call. Workaround until that ships: periodically check the booking calendar's Bookings tab and manually
+remove anyone who's already booked from the follow-up campaign. Given campaign volume (interested replies out
+of 516 contacts), this is a small, occasional manual check, not a blocker.
+
+**Remaining before go-live**: test one real/sample reply per track through the now-complete live pipeline
+(webhook → classify → tag → automation rule → follow-up email), Debounce-verify the purchased list, finish
+Campaign B's email copy, and populate real merge fields — see the project's `CLAUDE.md` "Next steps" for the
+current punch list.
 
 ### How to add a new campaign type
 

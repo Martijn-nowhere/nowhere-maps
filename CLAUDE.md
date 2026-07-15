@@ -65,13 +65,16 @@ School of Recycling automated email-reply-to-course enrollment system. Instantly
 - Test one real reply before campaigns go live (check dashboard + `/automation/log`)
 
 ### Before US district campaigns send (late August)
-- **Not yet done**: Debounce verification run on the purchased 516-contact list
-- **Not yet done**: Campaign B (Science/STEM track) email copy — only Campaign A's 4 emails are fully drafted; Track B needs the same structure with sharper NGSS/standards framing in Email 2
-- **Not yet done**: final merge-field population once list is verified (real district names/enrollment, not placeholders)
-- **Not yet done**: build the 2 systeme.io Automation Rules (tag added → enrol in calendar-booking follow-up sequence) for `us-district-curriculum-reply` and `us-district-science-reply` — code side is done, this is the remaining no-code step
-- Test one real/sample reply per track before go-live (see README "US school-district curriculum decision-maker outreach" section)
-- Set up the two Instantly campaigns (mailboxes, sequences, webhook), confirm campaign IDs match `US-24Aug-CurriculumDirectors` / `US-25Aug-ScienceSTEMDirectors` in `render.yaml`
-- Enable Instantly's "stop sending on reply" + AI Smart Pause for OOO auto-replies; consider "stop emails to whole company on any reply"
+- **Done**: real Instantly campaign IDs confirmed and match `render.yaml` (`US-24Aug-CurriculumDirectors` / `US-25Aug-ScienceSTEMDirectors`, both currently Draft status in Instantly)
+- **Done**: systeme.io booking flow fully built, no-code side — "District Intro Call" event (20 min, Google Meet, Asia/Makassar availability Mon-Fri 8-11PM + Tue-Sat 5:30-8AM WITA to cover all 4 continental US timezones without the account's 00:00-05:00 blackout), booking page at `schoolofrecycling.com/us-districts-call-booking` with a 3-question form (district name, role, optional context), shared "US District Warm Reply Follow-up" campaign (2 emails: booking link + 3-day nudge), both tags (`us-district-curriculum-reply` / `us-district-science-reply`) created, and a single combined Automation Rule (2 "Tag added" triggers, OR logic, → Subscribe to campaign) live
+- **Known gap**: systeme.io has no native "booked a meeting" trigger yet (on their roadmap, not shipped) — the nudge email can't auto-suppress once someone's booked. Workaround: periodically check the Bookings tab and manually remove anyone who's already booked from the campaign before the 3-day nudge fires. Worth re-checking systeme.io's roadmap before every future campaign that reuses this pattern.
+- **Not yet done**: Debounce verification run on the purchased 516-contact list (list not purchased yet — user needs to buy it first before this or merge-field work can proceed)
+- **Not yet done**: Campaign A's Email 1 subject line needs a fix — "Quick question re: {{district_name}}'s science/sustainability curriculum" reads Track-B-specific; broaden to something track-neutral like "...curriculum plans" since Track A's list includes many non-science titles (Chief Academic Officer, Deputy Superintendent, etc.)
+- **Not yet done**: Campaign A emails 3-4 (social proof, low-pressure close) not yet drafted/reviewed this pass — only Emails 1-2 reviewed so far
+- **Not yet done**: Campaign B (Science/STEM track) email copy — needs the same 4-email structure as Track A with sharper NGSS/standards framing in Email 2; hold until Track A copy + merge-field questions are resolved
+- **Not yet done**: final merge-field population once list is verified (real district names/enrollment, not placeholders) — also confirm CAN-SPAM compliance (physical postal address + opt-out mechanism) somewhere in the cold sequence, since this is manual sending to ~500 public-sector contacts, not through a bulk ESP with an auto-footer
+- **Not yet done**: Test one real/sample reply per track through the full live pipeline (webhook → tag → automation rule → follow-up email) now that all the no-code pieces exist (see README "US school-district curriculum decision-maker outreach" section)
+- **Not yet done**: Enable Instantly's "stop sending on reply" + AI Smart Pause for OOO auto-replies; consider "stop emails to whole company on any reply"
 
 ### End of August (school decision-maker campaigns — separate `schools` stub, still unimplemented)
 1. Create school campaigns in Instantly, get campaign IDs
