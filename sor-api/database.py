@@ -228,6 +228,15 @@ def get_stats_from_supabase():
         """)
         last_received = c.fetchone()[0]
 
+        c.execute("""
+            SELECT campaign_id, action, COUNT(*) as n FROM reply_automation_log
+            WHERE action LIKE 'tagged_district%' OR action LIKE 'logged_district%'
+            GROUP BY campaign_id, action
+        """)
+        district_by_campaign = {}
+        for campaign_id, action, n in c.fetchall():
+            district_by_campaign.setdefault(campaign_id or "unknown", {})[action] = n
+
         conn.close()
 
         return {
@@ -236,6 +245,7 @@ def get_stats_from_supabase():
             "module1_by_age_group": by_age,
             "module1_by_currency": by_currency,
             "by_language": by_language,
+            "district_by_campaign": district_by_campaign,
             "last_received_at": last_received.isoformat() if last_received else None,
             "errors": by_action.get("error", 0),
             "needs_currency_review": by_action.get("tagged_module1_currency_pending", 0),

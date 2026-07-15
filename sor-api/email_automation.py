@@ -929,6 +929,14 @@ _DASHBOARD_HTML = """<!doctype html>
   <div class="section-title">US district campaigns (curriculum + science tracks)</div>
   <div class="cards" id="district-cards"></div>
 
+  <div class="section-title">US district campaigns — by track</div>
+  <div class="wrap">
+    <table>
+      <thead><tr><th>Campaign</th><th>Interested</th><th>Referral</th><th>Not interested</th><th>Needs review</th></tr></thead>
+      <tbody id="district-table-body"></tbody>
+    </table>
+  </div>
+
   <div class="section-title">Recent activity</div>
   <div class="wrap">
     <table>
@@ -1007,6 +1015,19 @@ async function load() {
   document.getElementById("district-cards").innerHTML = districtCards.map(([l, n, cls]) =>
     `<div class="card ${cls}"><div class="n">${esc(n)}</div><div class="l">${esc(l)}</div></div>`
   ).join("");
+
+  const districtByCampaign = Object.entries(stats.district_by_campaign || {});
+  document.getElementById("district-table-body").innerHTML = districtByCampaign.length
+    ? districtByCampaign.map(([campaignId, counts]) => `
+        <tr>
+          <td>${esc(campaignId)}</td>
+          <td>${esc(counts.tagged_district_interested || 0)}</td>
+          <td>${esc(counts.logged_district_referral || 0)}</td>
+          <td>${esc(counts.logged_district_not_interested || 0)}</td>
+          <td>${esc(counts.logged_district_unclear || 0)}</td>
+        </tr>
+      `).join("")
+    : `<tr><td colspan="5">No district replies yet</td></tr>`;
 
   document.getElementById("log-body").innerHTML = log.map(r => `
     <tr class="${r.error ? 'error' : ''}">
